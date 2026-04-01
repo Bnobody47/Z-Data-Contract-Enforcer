@@ -143,17 +143,23 @@ def main():
             }
         )
 
+    # Shared aggregates so sequence_number is monotonic per aggregate (event-sourcing contract).
+    aggregate_ids = [str(uuid.uuid4()) for _ in range(5)]
+    seq_by_aggregate = {a: 0 for a in aggregate_ids}
+
     week5 = []
     for i in range(60):
         occurred = now - timedelta(minutes=2 * i)
         recorded = occurred + timedelta(seconds=random.randint(1, 25))
+        agg = aggregate_ids[i % len(aggregate_ids)]
+        seq_by_aggregate[agg] += 1
         week5.append(
             {
                 "event_id": str(uuid.uuid4()),
                 "event_type": random.choice(["DocumentProcessed", "ExtractionUpdated", "ContractValidated"]),
-                "aggregate_id": str(uuid.uuid4()),
+                "aggregate_id": agg,
                 "aggregate_type": "Document",
-                "sequence_number": i + 1,
+                "sequence_number": seq_by_aggregate[agg],
                 "payload": {"doc_index": i, "status": "ok"},
                 "metadata": {
                     "causation_id": None,

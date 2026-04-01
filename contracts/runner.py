@@ -9,7 +9,6 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
-
 UUID_RE = re.compile(r"^[0-9a-fA-F-]{36}$")
 
 
@@ -29,6 +28,10 @@ def flatten_records(records):
     rows = []
     for r in records:
         base = {k: v for k, v in r.items() if not isinstance(v, (list, dict))}
+        if "token_count" in r and isinstance(r["token_count"], dict):
+            tc = r["token_count"]
+            base["token_input"] = tc.get("input")
+            base["token_output"] = tc.get("output")
         if "extracted_facts" in r and isinstance(r["extracted_facts"], list):
             for fact in r["extracted_facts"] or [{}]:
                 row = dict(base)
@@ -61,6 +64,234 @@ def check_statistical_drift(column, current_mean, baselines):
     return "PASS", round(z, 2), f"{column} drift stable"
 
 
+def parse_iso(value: str):
+    if value is None:
+        return None
+    s = str(value).replace("Z", "+00:00")
+    try:
+        return datetime.fromisoformat(s)
+    except Exception:
+        return None
+
+
+def get_nested(obj, path: str):
+    cur = obj
+    for part in path.split("."):
+        if cur is None or not isinstance(cur, dict):
+            return None
+        cur = cur.get(part)
+    return cur
+
+
+def evaluate_constraints(contract: dict, records: list, results: list):
+    for c in contract.get("constraints", []) or []:
+        rule = c.get("rule")
+        sev = c.get("severity", "CRITICAL")
+        cid_check = c.get("id", "constraint")
+
+        if rule == "array_min_length":
+            path = c.get("path", "")
+            minimum = int(c.get("minimum", 1))
+            bad = 0
+            samples = []
+            for rec in records:
+                arr = rec.get(path) if path else None
+                if not isinstance(arr, list) or len(arr) < minimum:
+                    bad += 1
+                    if len(samples) < 3:
+                        samples.append(rec.get("doc_id") or rec.get("event_id") or str(rec)[:80])
+            results.append(
+                {
+                    "check_id": cid_check,
+                    "column_name": path,
+                    "check_type": "array_min_length",
+                    "status": "FAIL" if bad else "PASS",
+                    "actual_value": f"records_failing={bad}",
+                    "expected": f"len({path})>={minimum}",
+                    "severity": sev if bad else "LOW",
+                    "records_failing": bad,
+                    "sample_failing": samples,
+                    "message": c.get("description", ""),
+                }
+            )
+
+        elif rule == "entity_refs_in_entities":
+            bad = 0
+            samples = []
+            for rec in records:
+                entities = {e.get("entity_id") for e in rec.get("entities", []) if isinstance(e, dict)}
+                ok = True
+                for fact in rec.get("extracted_facts", []) or []:
+                    if not isinstance(fact, dict):
+                        continue
+                    for ref in fact.get("entity_refs", []) or []:
+                        if ref not in entities:
+                            ok = False
+                            break
+                    if not ok:
+                        break
+                if not ok:
+                    bad += 1
+                    if len(samples) < 3:
+                        samples.append(rec.get("doc_id", ""))
+            results.append(
+                {
+                    "check_id": cid_check,
+                    "column_name": "extracted_facts.entity_refs",
+                    "check_type": "relationship",
+                    "status": "FAIL" if bad else "PASS",
+                    "actual_value": f"records_failing={bad}",
+                    "expected": "all entity_refs exist in entities[].entity_id",
+                    "severity": sev if bad else "LOW",
+                    "records_failing": bad,
+                    "sample_failing": samples,
+                    "message": c.get("description", ""),
+                }
+            )
+
+        elif rule == "entity_type_enum":
+            allowed = set(c.get("allowed", []))
+            bad = 0
+            samples = []
+            for rec in records:
+                for ent in rec.get("entities", []) or []:
+                    if not isinstance(ent, dict):
+                        continue
+                    t = ent.get("type")
+                    if t not in allowed:
+                        bad += 1
+                        if len(samples) < 3:
+                            samples.append(str(t))
+            results.append(
+                {
+                    "check_id": cid_check,
+                    "column_name": "entities.type",
+                    "check_type": "enum",
+                    "status": "FAIL" if bad else "PASS",
+                    "actual_value": f"invalid_entity_rows={bad}",
+                    "expected": str(sorted(allowed)),
+                    "severity": sev if bad else "LOW",
+                    "records_failing": bad,
+                    "sample_failing": samples,
+                    "message": c.get("description", ""),
+                }
+            )
+
+        elif rule == "timestamp_order":
+            early_k = c.get("early", "")
+            late_k = c.get("late", "")
+            bad = 0
+            samples = []
+            for rec in records:
+                e = parse_iso(rec.get(early_k))
+                l = parse_iso(rec.get(late_k))
+                if e is None or l is None:
+                    bad += 1
+                    continue
+                if l < e:
+                    bad += 1
+                    if len(samples) < 3:
+                        samples.append(rec.get("event_id", ""))
+            results.append(
+                {
+                    "check_id": cid_check,
+                    "column_name": f"{late_k}>={early_k}",
+                    "check_type": "temporal_order",
+                    "status": "FAIL" if bad else "PASS",
+                    "actual_value": f"records_failing={bad}",
+                    "expected": f"{late_k} >= {early_k}",
+                    "severity": sev if bad else "LOW",
+                    "records_failing": bad,
+                    "sample_failing": samples,
+                    "message": c.get("description", ""),
+                }
+            )
+
+        elif rule == "monotonic_sequence":
+            group_field = c.get("group_field", "aggregate_id")
+            seq_field = c.get("sequence_field", "sequence_number")
+            strict = c.get("strict", True)
+            bad_groups = 0
+            samples = []
+            by_group = {}
+            for rec in records:
+                g = rec.get(group_field)
+                by_group.setdefault(g, []).append(rec)
+            for g, rows in by_group.items():
+                rows_sorted = sorted(rows, key=lambda r: (r.get(seq_field) is None, r.get(seq_field)))
+                seqs = [r.get(seq_field) for r in rows_sorted]
+                if any(s is None for s in seqs):
+                    bad_groups += 1
+                    if len(samples) < 3:
+                        samples.append(str(g))
+                    continue
+                prev = None
+                ok = True
+                for s in seqs:
+                    if not isinstance(s, int):
+                        ok = False
+                        break
+                    if prev is None:
+                        prev = s
+                        continue
+                    if strict:
+                        if s != prev + 1:
+                            ok = False
+                            break
+                    else:
+                        if s <= prev:
+                            ok = False
+                            break
+                    prev = s
+                if not ok:
+                    bad_groups += 1
+                    if len(samples) < 3:
+                        samples.append(str(g))
+            results.append(
+                {
+                    "check_id": cid_check,
+                    "column_name": f"{group_field}.{seq_field}",
+                    "check_type": "sequence_monotonic",
+                    "status": "FAIL" if bad_groups else "PASS",
+                    "actual_value": f"invalid_aggregate_groups={bad_groups}",
+                    "expected": "strict +1 sequence per aggregate" if strict else "monotonic sequence",
+                    "severity": sev if bad_groups else "LOW",
+                    "records_failing": bad_groups,
+                    "sample_failing": samples,
+                    "message": c.get("description", ""),
+                }
+            )
+
+        elif rule == "metadata_string":
+            path = c.get("path", "")
+            pat = c.get("pattern", "")
+            rx = re.compile(pat)
+            bad = 0
+            samples = []
+            for rec in records:
+                val = get_nested(rec, path)
+                if val is None:
+                    continue
+                if not rx.match(str(val)):
+                    bad += 1
+                    if len(samples) < 3:
+                        samples.append(str(val)[:120])
+            results.append(
+                {
+                    "check_id": cid_check,
+                    "column_name": path,
+                    "check_type": "pattern",
+                    "status": "FAIL" if bad else "PASS",
+                    "actual_value": f"records_failing={bad}",
+                    "expected": pat,
+                    "severity": sev if bad else "LOW",
+                    "records_failing": bad,
+                    "sample_failing": samples,
+                    "message": c.get("description", ""),
+                }
+            )
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--contract", required=True)
@@ -74,6 +305,9 @@ def main():
 
     results = []
     schema = contract.get("schema", {})
+
+    evaluate_constraints(contract, records, results)
+
     for column, clause in schema.items():
         if column not in df.columns:
             results.append(
@@ -87,12 +321,13 @@ def main():
                     "severity": "CRITICAL",
                     "records_failing": len(df),
                     "sample_failing": [],
-                    "message": f"{column} missing from dataset",
+                    "message": f"{column} missing from flattened dataset",
                 }
             )
             continue
 
         series = df[column]
+
         if clause.get("required") and series.isna().any():
             results.append(
                 {
@@ -125,21 +360,71 @@ def main():
             )
 
         expected_type = clause.get("type")
-        if expected_type == "number" and not pd.api.types.is_numeric_dtype(series):
-            results.append(
-                {
-                    "check_id": f"{contract['id']}.{column}.type",
-                    "column_name": column,
-                    "check_type": "type",
-                    "status": "FAIL",
-                    "actual_value": str(series.dtype),
-                    "expected": "numeric",
-                    "severity": "CRITICAL",
-                    "records_failing": len(series),
-                    "sample_failing": [str(v) for v in series.dropna().head(3).tolist()],
-                    "message": "Type mismatch for numeric field.",
-                }
+        if expected_type == "number":
+            if not pd.api.types.is_numeric_dtype(series):
+                results.append(
+                    {
+                        "check_id": f"{contract['id']}.{column}.type",
+                        "column_name": column,
+                        "check_type": "type",
+                        "status": "FAIL",
+                        "actual_value": str(series.dtype),
+                        "expected": "numeric",
+                        "severity": "CRITICAL",
+                        "records_failing": len(series),
+                        "sample_failing": [str(v) for v in series.dropna().head(3).tolist()],
+                        "message": "Type mismatch for numeric field.",
+                    }
+                )
+            else:
+                results.append(
+                    {
+                        "check_id": f"{contract['id']}.{column}.type",
+                        "column_name": column,
+                        "check_type": "type",
+                        "status": "PASS",
+                        "actual_value": str(series.dtype),
+                        "expected": "numeric",
+                        "severity": "LOW",
+                        "records_failing": 0,
+                        "sample_failing": [],
+                        "message": "Numeric type check passed.",
+                    }
+                )
+        elif expected_type == "integer":
+            int_ok = pd.api.types.is_integer_dtype(series) or (
+                pd.api.types.is_float_dtype(series) and (series.dropna() == series.dropna().astype(int)).all()
             )
+            if not int_ok:
+                results.append(
+                    {
+                        "check_id": f"{contract['id']}.{column}.type",
+                        "column_name": column,
+                        "check_type": "type",
+                        "status": "FAIL",
+                        "actual_value": str(series.dtype),
+                        "expected": "integer",
+                        "severity": "CRITICAL",
+                        "records_failing": len(series),
+                        "sample_failing": [],
+                        "message": "Type mismatch for integer field.",
+                    }
+                )
+            else:
+                results.append(
+                    {
+                        "check_id": f"{contract['id']}.{column}.type",
+                        "column_name": column,
+                        "check_type": "type",
+                        "status": "PASS",
+                        "actual_value": str(series.dtype),
+                        "expected": "integer",
+                        "severity": "LOW",
+                        "records_failing": 0,
+                        "sample_failing": [],
+                        "message": "Integer type check passed.",
+                    }
+                )
         else:
             results.append(
                 {
@@ -152,27 +437,84 @@ def main():
                     "severity": "LOW",
                     "records_failing": 0,
                     "sample_failing": [],
-                    "message": "Type check passed.",
+                    "message": "Type check passed (string/boolean).",
                 }
             )
 
         if "enum" in clause:
             bad = series.dropna()[~series.dropna().astype(str).isin([str(v) for v in clause["enum"]])]
-            if len(bad):
-                results.append(
-                    {
-                        "check_id": f"{contract['id']}.{column}.enum",
-                        "column_name": column,
-                        "check_type": "enum",
-                        "status": "FAIL",
-                        "actual_value": f"invalid_count={len(bad)}",
-                        "expected": f"in {clause['enum']}",
-                        "severity": "CRITICAL",
-                        "records_failing": int(len(bad)),
-                        "sample_failing": [str(v) for v in bad.head(3).tolist()],
-                        "message": "Enum conformance check failed.",
-                    }
-                )
+            status = "FAIL" if len(bad) else "PASS"
+            results.append(
+                {
+                    "check_id": f"{contract['id']}.{column}.enum",
+                    "column_name": column,
+                    "check_type": "enum",
+                    "status": status,
+                    "actual_value": f"invalid_count={len(bad)}" if len(bad) else "all valid",
+                    "expected": f"in {clause['enum']}",
+                    "severity": "CRITICAL" if status == "FAIL" else "LOW",
+                    "records_failing": int(len(bad)),
+                    "sample_failing": [str(v) for v in bad.head(3).tolist()],
+                    "message": "Enum conformance check.",
+                }
+            )
+
+        if clause.get("unique"):
+            dup = series.duplicated(keep=False) & series.notna()
+            status = "FAIL" if dup.any() else "PASS"
+            results.append(
+                {
+                    "check_id": f"{contract['id']}.{column}.unique",
+                    "column_name": column,
+                    "check_type": "unique",
+                    "status": status,
+                    "actual_value": f"duplicate_rows={int(dup.sum())}",
+                    "expected": "unique values",
+                    "severity": "CRITICAL" if status == "FAIL" else "LOW",
+                    "records_failing": int(dup.sum()),
+                    "sample_failing": series[dup].head(3).astype(str).tolist(),
+                    "message": "Uniqueness constraint.",
+                }
+            )
+
+        if clause.get("minLength") is not None:
+            m = int(clause["minLength"])
+            bad = series.dropna().astype(str).str.len() < m
+            status = "FAIL" if bad.any() else "PASS"
+            results.append(
+                {
+                    "check_id": f"{contract['id']}.{column}.min_length",
+                    "column_name": column,
+                    "check_type": "min_length",
+                    "status": status,
+                    "actual_value": f"short_count={int(bad.sum())}",
+                    "expected": f"len>={m}",
+                    "severity": "CRITICAL" if status == "FAIL" else "LOW",
+                    "records_failing": int(bad.sum()),
+                    "sample_failing": series[bad].head(3).astype(str).tolist(),
+                    "message": "Minimum string length.",
+                }
+            )
+
+        if clause.get("pattern"):
+            rx = re.compile(clause["pattern"])
+            non_null = series.dropna().astype(str)
+            bad_mask = ~non_null.apply(lambda s: bool(rx.match(s)))
+            status = "FAIL" if bad_mask.any() else "PASS"
+            results.append(
+                {
+                    "check_id": f"{contract['id']}.{column}.pattern",
+                    "column_name": column,
+                    "check_type": "regex",
+                    "status": status,
+                    "actual_value": f"invalid_count={int(bad_mask.sum())}",
+                    "expected": clause["pattern"],
+                    "severity": "CRITICAL" if status == "FAIL" else "LOW",
+                    "records_failing": int(bad_mask.sum()),
+                    "sample_failing": non_null[bad_mask].head(3).tolist(),
+                    "message": "Regex pattern check.",
+                }
+            )
 
         if clause.get("format") == "uuid":
             non_null = series.dropna().astype(str)
@@ -196,9 +538,7 @@ def main():
         if clause.get("format") == "date-time":
             bad_vals = []
             for value in series.dropna().astype(str):
-                try:
-                    datetime.fromisoformat(value.replace("Z", "+00:00"))
-                except Exception:
+                if parse_iso(value) is None:
                     bad_vals.append(value)
             status = "PASS" if not bad_vals else "FAIL"
             results.append(
@@ -221,8 +561,13 @@ def main():
             if len(numeric):
                 min_v = float(numeric.min())
                 max_v = float(numeric.max())
-                min_ok = "minimum" not in clause or min_v >= float(clause["minimum"])
-                max_ok = "maximum" not in clause or max_v <= float(clause["maximum"])
+                lo = float(clause["minimum"]) if "minimum" in clause else None
+                hi = float(clause["maximum"]) if "maximum" in clause else None
+                min_ok = lo is None or min_v >= lo
+                max_ok = hi is None or max_v <= hi
+                below = (numeric < lo) if lo is not None else pd.Series([False] * len(numeric), index=numeric.index)
+                above = (numeric > hi) if hi is not None else pd.Series([False] * len(numeric), index=numeric.index)
+                failing = int((below | above).sum())
                 ok = min_ok and max_ok
                 results.append(
                     {
@@ -231,15 +576,17 @@ def main():
                         "check_type": "range",
                         "status": "PASS" if ok else "FAIL",
                         "actual_value": f"min={min_v}, max={max_v}",
-                        "expected": f"min>={clause.get('minimum')}, max<={clause.get('maximum')}",
+                        "expected": f"min>={lo}, max<={hi}",
                         "severity": "CRITICAL" if not ok else "LOW",
-                        "records_failing": int((numeric < clause.get("minimum", min_v)).sum() + (numeric > clause.get("maximum", max_v)).sum()),
+                        "records_failing": failing,
                         "sample_failing": [],
-                        "message": "Range check.",
+                        "message": "Range check (catches 0–1 vs 0–100 semantic drift when bounds apply).",
                     }
                 )
 
-    baseline_file = Path("schema_snapshots/baselines.json")
+    contract_id = contract.get("id", "default")
+    safe_id = re.sub(r"[^a-zA-Z0-9_-]+", "_", contract_id)
+    baseline_file = Path("schema_snapshots") / f"baselines_{safe_id}.json"
     baselines = {}
     if baseline_file.exists():
         with baseline_file.open("r", encoding="utf-8") as f:
@@ -268,9 +615,16 @@ def main():
         baseline_file.parent.mkdir(parents=True, exist_ok=True)
         columns = {}
         for col in df.select_dtypes(include="number").columns:
-            columns[col] = {"mean": float(df[col].mean()), "stddev": float(df[col].std() if len(df[col].dropna()) > 1 else 0.0)}
+            columns[col] = {
+                "mean": float(df[col].mean()),
+                "stddev": float(df[col].std() if len(df[col].dropna()) > 1 else 0.0),
+            }
         with baseline_file.open("w", encoding="utf-8") as f:
-            json.dump({"written_at": datetime.utcnow().isoformat(), "columns": columns}, f, indent=2)
+            json.dump(
+                {"contract_id": contract_id, "written_at": datetime.utcnow().isoformat(), "columns": columns},
+                f,
+                indent=2,
+            )
 
     passed, failed, warned, errored = status_counters(results)
     report = {

@@ -27,6 +27,27 @@ This Week 7 system enforces contracts across the five prior systems by turning e
    - Week 3/5 outputs are generated in canonical Week 7 interface shape for contract testing.
    - Week 4 lineage snapshot includes references to your actual Week 3 and Week 5 repos.
 
+## Trust Boundary Model (Tier 1/2/3)
+
+This repository currently implements a Tier 1-first enforcement model and documents how it extends to Tier 2 and Tier 3.
+
+- Tier 1 (same team, same repo, shared trust boundary)
+  - Full lineage graph available.
+  - Violation attribution uses graph traversal plus git history.
+  - Blast radius can be computed directly from known downstream nodes.
+
+- Tier 2 (different teams, same company)
+  - Partial lineage visibility only.
+  - Add central contract registry with dependency subscriptions.
+  - Blast radius is computed as: known internal lineage impact + subscribed team notifications.
+
+- Tier 3 (different companies)
+  - No shared lineage graph.
+  - Contract registry and versioned compatibility are the primary control plane.
+  - Cross-company blast radius is subscriber-level impact only; each consumer computes internal impact independently.
+
+Design principle: inside a trust boundary, use lineage for causal attribution; across trust boundaries, use contract subscriptions and compatibility gates.
+
 ## Interim Submission Status
 
 - `DOMAIN_NOTES.md` present with all five required answers.
