@@ -1,0 +1,77 @@
+kind: DataContract
+apiVersion: v3.0.0
+id: week5-event-records
+info:
+  title: week5-event-records contract
+  version: 1.0.0
+  owner: week7-team
+  description: Auto-generated data contract.
+servers:
+  local:
+    type: local
+    path: outputs/week5/events.jsonl
+    format: jsonl
+schema:
+  event_id:
+    type: string
+    required: true
+    description: Auto-generated clause for event_id.
+    format: uuid
+    pattern: ^[0-9a-fA-F-]{36}$
+  event_type:
+    type: string
+    required: true
+    description: Auto-generated clause for event_type.
+    enum:
+    - DocumentProcessed
+    - ContractValidated
+    - ExtractionUpdated
+  aggregate_id:
+    type: string
+    required: true
+    description: Auto-generated clause for aggregate_id.
+    format: uuid
+    pattern: ^[0-9a-fA-F-]{36}$
+  aggregate_type:
+    type: string
+    required: true
+    description: Auto-generated clause for aggregate_type.
+    enum:
+    - Document
+  sequence_number:
+    type: integer
+    required: true
+    description: Auto-generated clause for sequence_number.
+    stats:
+      min: 1.0
+      max: 60.0
+      mean: 30.5
+      p25: 15.75
+      p50: 30.5
+      p75: 45.25
+      p95: 57.05
+      p99: 59.41
+      stddev: 17.46424919657298
+  schema_version:
+    type: string
+    required: true
+    description: Auto-generated clause for schema_version.
+    enum:
+    - '1.0'
+  occurred_at:
+    type: string
+    required: true
+    description: Auto-generated clause for occurred_at.
+    format: date-time
+  recorded_at:
+    type: string
+    required: true
+    description: Auto-generated clause for recorded_at.
+    format: date-time
+lineage:
+  upstream: []
+  downstream:
+  - id: pipeline::week7-contract-enforcer
+    fields_consumed:
+    - doc_id
+    - extracted_facts

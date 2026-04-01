@@ -1,0 +1,108 @@
+kind: DataContract
+apiVersion: v3.0.0
+id: week3-document-refinery-extractions
+info:
+  title: week3-document-refinery-extractions contract
+  version: 1.0.0
+  owner: week7-team
+  description: Auto-generated data contract.
+servers:
+  local:
+    type: local
+    path: outputs/week3/extractions.jsonl
+    format: jsonl
+schema:
+  doc_id:
+    type: string
+    required: true
+    description: Auto-generated clause for doc_id.
+    format: uuid
+    pattern: ^[0-9a-fA-F-]{36}$
+  source_path:
+    type: string
+    required: true
+    description: Auto-generated clause for source_path.
+  source_hash:
+    type: string
+    required: true
+    description: Auto-generated clause for source_hash.
+  extraction_model:
+    type: string
+    required: true
+    description: Auto-generated clause for extraction_model.
+    enum:
+    - claude-3-5-sonnet-20241022
+  processing_time_ms:
+    type: integer
+    required: true
+    description: Auto-generated clause for processing_time_ms.
+    stats:
+      min: 429.0
+      max: 2194.0
+      mean: 1343.2
+      p25: 917.0
+      p50: 1375.5
+      p75: 1689.25
+      p95: 2120.5
+      p99: 2173.35
+      stddev: 506.16332863438186
+  extracted_at:
+    type: string
+    required: true
+    description: Auto-generated clause for extracted_at.
+    format: date-time
+  fact_fact_id:
+    type: string
+    required: true
+    description: Auto-generated clause for fact_fact_id.
+    format: uuid
+    pattern: ^[0-9a-fA-F-]{36}$
+  fact_text:
+    type: string
+    required: true
+    description: Auto-generated clause for fact_text.
+  fact_entity_refs:
+    type: string
+    required: true
+    description: Auto-generated clause for fact_entity_refs.
+  fact_confidence:
+    type: number
+    required: true
+    description: Confidence score. Must remain 0.0-1.0 float.
+    minimum: 0.0
+    maximum: 1.0
+    stats:
+      min: 0.622
+      max: 0.968
+      mean: 0.8059
+      p25: 0.703
+      p50: 0.841
+      p75: 0.88725
+      p95: 0.9514999999999999
+      p99: 0.96682
+      stddev: 0.10660551389689156
+  fact_page_ref:
+    type: integer
+    required: true
+    description: Auto-generated clause for fact_page_ref.
+    stats:
+      min: 1.0
+      max: 12.0
+      mean: 6.083333333333333
+      p25: 3.0
+      p50: 6.0
+      p75: 10.0
+      p95: 11.049999999999997
+      p99: 12.0
+      stddev: 3.7248213091785676
+  fact_source_excerpt:
+    type: string
+    required: true
+    description: Auto-generated clause for fact_source_excerpt.
+lineage:
+  upstream: []
+  downstream:
+  - id: pipeline::week7-contract-enforcer
+    fields_consumed:
+    - doc_id
+    - extracted_facts
