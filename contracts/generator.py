@@ -1,8 +1,11 @@
 import argparse
 import json
+import os
 import re
+import urllib.error
+import urllib.request
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pandas as pd
 import yaml
@@ -88,6 +91,13 @@ def column_to_clause(profile: dict):
             "extracted_facts[].confidence: model confidence 0.0–1.0. "
             "BREAKING if rescaled to 0–100 or integer percent."
         )
+        stats = profile.get("stats") or {}
+        mean_v = stats.get("mean")
+        if mean_v is not None and (float(mean_v) > 0.99 or float(mean_v) < 0.01):
+            clause["distribution_warning"] = (
+                f"Suspicious profiled mean={mean_v:.4f} on [0,1] scale — verify calibration; "
+                "values clustered near 0 or 1 often indicate scale misuse or degenerate model output."
+            )
     if name.endswith("_id"):
         clause["format"] = "uuid"
         clause["pattern"] = "^[0-9a-fA-F-]{36}$"
@@ -119,29 +129,196 @@ def detect_kind(contract_id: str, source: Path) -> str:
     return "generic"
 
 
-def inject_lineage(contract: dict, lineage_path: Path):
+def inject_lineage(contract: dict, lineage_path: Path, contract_id: str, kind: str):
+    """Populate downstream consumers by querying Week 4 lineage edges (file → pipeline CONSUMES)."""
+    empty = {"upstream": [], "downstream": [], "downstream_from_graph": []}
     if not lineage_path.exists():
-        contract["lineage"] = {"upstream": [], "downstream": []}
+        contract.setdefault("lineage", {}).update(empty)
         return contract
     with lineage_path.open("r", encoding="utf-8") as f:
         lines = [line.strip() for line in f if line.strip()]
     if not lines:
-        contract["lineage"] = {"upstream": [], "downstream": []}
+        contract.setdefault("lineage", {}).update(empty)
         return contract
     snapshot = json.loads(lines[-1])
-    consumers = []
-    for e in snapshot.get("edges", []):
-        source = str(e.get("source", "")).lower()
-        if "week3" in source or "extraction" in source or "week5" in source or "event" in source:
-            consumers.append(e.get("target"))
-    consumers = [c for c in dict.fromkeys(consumers) if c]
-    contract["lineage"] = {
-        "upstream": [],
-        "downstream": [
-            {"id": c, "fields_consumed": ["doc_id", "extracted_facts"]} for c in consumers
-        ],
-    }
+    nodes = {n.get("node_id"): n for n in snapshot.get("nodes", []) if n.get("node_id")}
+    edges = snapshot.get("edges", []) or []
+
+    producer_substr = ""
+    fields_default = ["doc_id", "extracted_facts"]
+    if kind == "week3_extractions" or "week3" in contract_id.lower():
+        producer_substr = "week3"
+        fields_default = ["doc_id", "extracted_facts", "entities", "source_hash"]
+    elif kind == "week5_events" or "week5" in contract_id.lower():
+        producer_substr = "week5"
+        fields_default = ["event_id", "aggregate_id", "sequence_number", "occurred_at", "recorded_at", "event_type"]
+
+    producer_node_ids = [
+        nid
+        for nid, n in nodes.items()
+        if n.get("type") == "FILE" and producer_substr and producer_substr in str(nid).lower()
+    ]
+
+    downstream_from_graph = []
+    for pid in producer_node_ids:
+        for e in edges:
+            if e.get("source") != pid:
+                continue
+            if str(e.get("relationship", "")).upper() != "CONSUMES":
+                continue
+            tgt = e.get("target")
+            tn = nodes.get(tgt, {}) or {}
+            md = tn.get("metadata") or {}
+            downstream_from_graph.append(
+                {
+                    "producer_node_id": pid,
+                    "consumer_node_id": tgt,
+                    "consumer_label": tn.get("label"),
+                    "consumer_path": md.get("path"),
+                    "relationship": e.get("relationship"),
+                }
+            )
+
+    downstream = [
+        {
+            "id": row["consumer_node_id"],
+            "fields_consumed": list(fields_default),
+            "source": "week4_lineage_snapshot",
+        }
+        for row in downstream_from_graph
+    ]
+
+    contract.setdefault("lineage", {})
+    contract["lineage"]["upstream"] = contract["lineage"].get("upstream", [])
+    contract["lineage"]["downstream"] = downstream
+    contract["lineage"]["downstream_from_graph"] = downstream_from_graph
+    contract["lineage"]["lineage_snapshot_id"] = snapshot.get("snapshot_id")
     return contract
+
+
+def safe_contract_id_for_path(contract_id: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9_-]+", "_", contract_id)
+
+
+def write_statistical_baselines(contract_id: str, df: pd.DataFrame):
+    """Persist mean/stddev per numeric column (same shape as ValidationRunner baselines)."""
+    safe_id = safe_contract_id_for_path(contract_id)
+    out = Path("schema_snapshots") / f"baselines_{safe_id}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    columns = {}
+    for col in df.select_dtypes(include="number").columns:
+        columns[col] = {
+            "mean": float(df[col].mean()),
+            "stddev": float(df[col].std() if len(df[col].dropna()) > 1 else 0.0),
+        }
+    payload = {
+        "contract_id": contract_id,
+        "written_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "columns": columns,
+        "source": "ContractGenerator.profiling",
+    }
+    out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    # Aggregate file resembling schema_snapshots/baselines.json (multi-contract)
+    agg_path = Path("schema_snapshots") / "baselines.json"
+    agg = {}
+    if agg_path.exists():
+        try:
+            agg = json.loads(agg_path.read_text(encoding="utf-8"))
+        except Exception:
+            agg = {}
+    if not isinstance(agg, dict):
+        agg = {}
+    agg.setdefault("contracts", {})
+    agg["contracts"][contract_id] = {"columns": columns, "written_at": payload["written_at"]}
+    agg["written_at"] = payload["written_at"]
+    agg_path.write_text(json.dumps(agg, indent=2), encoding="utf-8")
+
+
+def llm_annotate_ambiguous_columns(column_profiles: dict) -> list:
+    """
+    Optional LLM call for high-cardinality string columns (ambiguous semantics).
+    Uses OPENAI_API_KEY + OPENAI_MODEL when set; otherwise records a skipped call (still an explicit annotation pass).
+    """
+    ambiguous = []
+    for name, prof in column_profiles.items():
+        if infer_type(prof["dtype"]) != "string":
+            continue
+        if int(prof.get("cardinality_estimate") or 0) <= 10:
+            continue
+        samples = prof.get("sample_values") or []
+        ambiguous.append((name, samples[:8]))
+
+    annotations = []
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini").strip()
+
+    for col_name, samples in ambiguous[:12]:
+        if not api_key:
+            annotations.append(
+                {
+                    "column": col_name,
+                    "llm_annotation": None,
+                    "llm_call_status": "skipped_no_api_key",
+                    "note": "Set OPENAI_API_KEY to enable live LLM column semantics annotation.",
+                }
+            )
+            continue
+        body = json.dumps(
+            {
+                "model": model,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Data contract profiling: column `{col_name}` in a JSONL dataset. "
+                            f"Sample string values: {json.dumps(samples)}. "
+                            "In one sentence, suggest likely semantic meaning and whether it should be enum, free text, or id. "
+                            "Reply as JSON: {{\"summary\": \"...\", \"suggested_contract_type\": \"...\"}}"
+                        ),
+                    }
+                ],
+                "temperature": 0.2,
+            }
+        ).encode("utf-8")
+        req = urllib.request.Request(
+            "https://api.openai.com/v1/chat/completions",
+            data=body,
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                raw = json.loads(resp.read().decode("utf-8"))
+            content = (raw.get("choices") or [{}])[0].get("message", {}).get("content", "")
+            annotations.append(
+                {
+                    "column": col_name,
+                    "llm_call_status": "ok",
+                    "raw_response_excerpt": content[:500],
+                }
+            )
+        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError) as e:
+            annotations.append({"column": col_name, "llm_call_status": "error", "error": str(e)[:300]})
+
+    return annotations
+
+
+def apply_fact_confidence_warnings(schema: dict, column_profiles: dict):
+    """After enrich_week3_schema, attach distribution_warning using profiled stats."""
+    fc = schema.get("fact_confidence")
+    prof = column_profiles.get("fact_confidence")
+    if not fc or not prof:
+        return
+    stats = prof.get("stats") or {}
+    mean_v = stats.get("mean")
+    if mean_v is None:
+        return
+    if float(mean_v) > 0.99 or float(mean_v) < 0.01:
+        fc["distribution_warning"] = (
+            f"Profiled mean={float(mean_v):.4f} on [0,1] confidence — verify calibration; "
+            "clustering near boundaries may indicate wrong scale or saturation."
+        )
 
 
 def enrich_week3_schema(schema: dict, columns: set) -> dict:
@@ -395,6 +572,7 @@ def build_contract(contract_id: str, source_path: str, column_profiles: dict, ki
     }
     if kind == "week3_extractions":
         contract["schema"] = enrich_week3_schema(schema, columns)
+        apply_fact_confidence_warnings(contract["schema"], column_profiles)
         contract["constraints"] = week3_constraints()
         contract["quality"] = week3_quality()
         contract["lineage"] = contract.get("lineage", {})
@@ -481,7 +659,7 @@ where fact_confidence is not null
 def write_snapshot(contract: dict, contract_id: str):
     snap_dir = Path("schema_snapshots") / contract_id
     snap_dir.mkdir(parents=True, exist_ok=True)
-    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     with (snap_dir / f"{ts}.yaml").open("w", encoding="utf-8") as f:
         yaml.safe_dump(contract, f, sort_keys=False)
 
@@ -506,8 +684,11 @@ def main():
     df = flatten_records(records)
     column_profiles = {col: profile_column(df[col], col) for col in df.columns}
     contract = build_contract(args.contract_id, args.source, column_profiles, kind, records)
+    contract["llm_annotations"] = llm_annotate_ambiguous_columns(column_profiles)
     if args.lineage:
-        contract = inject_lineage(contract, Path(args.lineage))
+        contract = inject_lineage(contract, Path(args.lineage), args.contract_id, kind)
+
+    write_statistical_baselines(args.contract_id, df)
 
     file_name = f"{sanitize_contract_filename(args.contract_id)}.yaml"
     output_file = output_dir / file_name

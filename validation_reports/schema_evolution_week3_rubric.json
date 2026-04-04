@@ -1,0 +1,226 @@
+{
+  "contract_id": "week3-document-refinery-extractions",
+  "old_snapshot": "schema_snapshots\\week3-document-refinery-extractions\\20260403_080206.yaml",
+  "new_snapshot": "schema_snapshots\\week3-document-refinery-extractions\\20260403_080258.yaml",
+  "since_filter": "2026-04-01T00:00:00Z",
+  "compatibility_verdict": "BREAKING",
+  "breaking_fields": [
+    "fact_confidence"
+  ],
+  "changes": [
+    {
+      "field": "doc_id",
+      "verdict": "COMPATIBLE",
+      "taxonomy": "UNCHANGED_MATERIAL",
+      "severity": "LOW",
+      "reason": "No breaking taxonomy match for doc_id."
+    },
+    {
+      "field": "extracted_at",
+      "verdict": "COMPATIBLE",
+      "taxonomy": "UNCHANGED_MATERIAL",
+      "severity": "LOW",
+      "reason": "No breaking taxonomy match for extracted_at."
+    },
+    {
+      "field": "extraction_model",
+      "verdict": "COMPATIBLE",
+      "taxonomy": "UNCHANGED_MATERIAL",
+      "severity": "LOW",
+      "reason": "No breaking taxonomy match for extraction_model."
+    },
+    {
+      "field": "fact_confidence",
+      "verdict": "BREAKING",
+      "taxonomy": "CONFIDENCE_SCALE_DRIFT",
+      "severity": "CRITICAL",
+      "reason": "Profiled max shifted for fact_confidence: 0.976 -> 97.6 (0\u20131 vs 0\u2013100 semantic drift)."
+    },
+    {
+      "field": "fact_entity_refs",
+      "verdict": "COMPATIBLE",
+      "taxonomy": "UNCHANGED_MATERIAL",
+      "severity": "LOW",
+      "reason": "No breaking taxonomy match for fact_entity_refs."
+    },
+    {
+      "field": "fact_fact_id",
+      "verdict": "COMPATIBLE",
+      "taxonomy": "UNCHANGED_MATERIAL",
+      "severity": "LOW",
+      "reason": "No breaking taxonomy match for fact_fact_id."
+    },
+    {
+      "field": "fact_page_ref",
+      "verdict": "COMPATIBLE",
+      "taxonomy": "UNCHANGED_MATERIAL",
+      "severity": "LOW",
+      "reason": "No breaking taxonomy match for fact_page_ref."
+    },
+    {
+      "field": "fact_source_excerpt",
+      "verdict": "COMPATIBLE",
+      "taxonomy": "UNCHANGED_MATERIAL",
+      "severity": "LOW",
+      "reason": "No breaking taxonomy match for fact_source_excerpt."
+    },
+    {
+      "field": "fact_text",
+      "verdict": "COMPATIBLE",
+      "taxonomy": "UNCHANGED_MATERIAL",
+      "severity": "LOW",
+      "reason": "No breaking taxonomy match for fact_text."
+    },
+    {
+      "field": "processing_time_ms",
+      "verdict": "COMPATIBLE",
+      "taxonomy": "UNCHANGED_MATERIAL",
+      "severity": "LOW",
+      "reason": "No breaking taxonomy match for processing_time_ms."
+    },
+    {
+      "field": "source_hash",
+      "verdict": "COMPATIBLE",
+      "taxonomy": "UNCHANGED_MATERIAL",
+      "severity": "LOW",
+      "reason": "No breaking taxonomy match for source_hash."
+    },
+    {
+      "field": "source_path",
+      "verdict": "COMPATIBLE",
+      "taxonomy": "UNCHANGED_MATERIAL",
+      "severity": "LOW",
+      "reason": "No breaking taxonomy match for source_path."
+    },
+    {
+      "field": "token_input",
+      "verdict": "COMPATIBLE",
+      "taxonomy": "UNCHANGED_MATERIAL",
+      "severity": "LOW",
+      "reason": "No breaking taxonomy match for token_input."
+    },
+    {
+      "field": "token_output",
+      "verdict": "COMPATIBLE",
+      "taxonomy": "UNCHANGED_MATERIAL",
+      "severity": "LOW",
+      "reason": "No breaking taxonomy match for token_output."
+    }
+  ],
+  "migration_impact_report": {
+    "diff": [
+      {
+        "field": "doc_id",
+        "verdict": "COMPATIBLE",
+        "taxonomy": "UNCHANGED_MATERIAL",
+        "severity": "LOW",
+        "reason": "No breaking taxonomy match for doc_id."
+      },
+      {
+        "field": "extracted_at",
+        "verdict": "COMPATIBLE",
+        "taxonomy": "UNCHANGED_MATERIAL",
+        "severity": "LOW",
+        "reason": "No breaking taxonomy match for extracted_at."
+      },
+      {
+        "field": "extraction_model",
+        "verdict": "COMPATIBLE",
+        "taxonomy": "UNCHANGED_MATERIAL",
+        "severity": "LOW",
+        "reason": "No breaking taxonomy match for extraction_model."
+      },
+      {
+        "field": "fact_confidence",
+        "verdict": "BREAKING",
+        "taxonomy": "CONFIDENCE_SCALE_DRIFT",
+        "severity": "CRITICAL",
+        "reason": "Profiled max shifted for fact_confidence: 0.976 -> 97.6 (0\u20131 vs 0\u2013100 semantic drift)."
+      },
+      {
+        "field": "fact_entity_refs",
+        "verdict": "COMPATIBLE",
+        "taxonomy": "UNCHANGED_MATERIAL",
+        "severity": "LOW",
+        "reason": "No breaking taxonomy match for fact_entity_refs."
+      },
+      {
+        "field": "fact_fact_id",
+        "verdict": "COMPATIBLE",
+        "taxonomy": "UNCHANGED_MATERIAL",
+        "severity": "LOW",
+        "reason": "No breaking taxonomy match for fact_fact_id."
+      },
+      {
+        "field": "fact_page_ref",
+        "verdict": "COMPATIBLE",
+        "taxonomy": "UNCHANGED_MATERIAL",
+        "severity": "LOW",
+        "reason": "No breaking taxonomy match for fact_page_ref."
+      },
+      {
+        "field": "fact_source_excerpt",
+        "verdict": "COMPATIBLE",
+        "taxonomy": "UNCHANGED_MATERIAL",
+        "severity": "LOW",
+        "reason": "No breaking taxonomy match for fact_source_excerpt."
+      },
+      {
+        "field": "fact_text",
+        "verdict": "COMPATIBLE",
+        "taxonomy": "UNCHANGED_MATERIAL",
+        "severity": "LOW",
+        "reason": "No breaking taxonomy match for fact_text."
+      },
+      {
+        "field": "processing_time_ms",
+        "verdict": "COMPATIBLE",
+        "taxonomy": "UNCHANGED_MATERIAL",
+        "severity": "LOW",
+        "reason": "No breaking taxonomy match for processing_time_ms."
+      },
+      {
+        "field": "source_hash",
+        "verdict": "COMPATIBLE",
+        "taxonomy": "UNCHANGED_MATERIAL",
+        "severity": "LOW",
+        "reason": "No breaking taxonomy match for source_hash."
+      },
+      {
+        "field": "source_path",
+        "verdict": "COMPATIBLE",
+        "taxonomy": "UNCHANGED_MATERIAL",
+        "severity": "LOW",
+        "reason": "No breaking taxonomy match for source_path."
+      },
+      {
+        "field": "token_input",
+        "verdict": "COMPATIBLE",
+        "taxonomy": "UNCHANGED_MATERIAL",
+        "severity": "LOW",
+        "reason": "No breaking taxonomy match for token_input."
+      },
+      {
+        "field": "token_output",
+        "verdict": "COMPATIBLE",
+        "taxonomy": "UNCHANGED_MATERIAL",
+        "severity": "LOW",
+        "reason": "No breaking taxonomy match for token_output."
+      }
+    ],
+    "compatibility_verdict": "BREAKING",
+    "blast_radius_from_registry": [
+      "week4-cartographer"
+    ],
+    "per_consumer_failure_modes": [],
+    "migration_checklist": [
+      "Migrate field 'fact_confidence': notify subscribers in contract_registry/subscriptions.yaml; update generated_contracts/week3_document_refinery_extractions.yaml and re-run contracts/runner.py --mode AUDIT.",
+      "Refresh statistical baselines: delete or regenerate schema_snapshots/baselines_*.json after producer fix."
+    ],
+    "rollback_plan": [
+      "Revert producer deployment to the commit that produced the older snapshot YAML in schema_snapshots/.",
+      "Restore prior generated_contracts/*.yaml from git and run: python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions.jsonl --output validation_reports/rollback_check.json --mode AUDIT",
+      "Ping each subscriber_id listed in migration_impact_report.blast_radius_from_registry with rollback notice."
+    ]
+  }
+}

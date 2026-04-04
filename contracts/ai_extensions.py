@@ -1,5 +1,6 @@
 import argparse
 import json
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -148,6 +149,29 @@ def save_ai_baseline(baseline_path: Path, value: dict):
     baseline_path.write_text(json.dumps(value, indent=2), encoding="utf-8")
 
 
+def append_ai_warn_to_violation_log(log_path: Path, violation_rate: float, baseline_rate: float, trend: str, threshold: float):
+    """Rubric: WARN entry to violation_log when LLM output violation rate breaches policy."""
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    entry = {
+        "violation_id": str(uuid.uuid4()),
+        "check_id": "ai_extensions.llm_output_schema_violation_rate",
+        "detected_at": iso_now(),
+        "status": "WARN",
+        "severity": "WARNING",
+        "source": "contracts/ai_extensions.py",
+        "message": (
+            f"LLM output schema violation_rate={violation_rate:.4f} exceeds warn_threshold={threshold} "
+            f"or trend={trend} vs baseline={baseline_rate}."
+        ),
+        "blame_chain": [],
+        "blast_radius": {"note": "Week 2 verdict consumers; see contract_registry week2-auditor-verdicts"},
+        "records_failing": 0,
+        "failing_field": "overall_verdict",
+    }
+    with log_path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry) + "\n")
+
+
 def check_output_schema_violation_rate(verdicts: list, baseline_path: Path, warn_threshold: float = 0.02):
     total = len(verdicts)
     if total == 0:
@@ -180,6 +204,7 @@ def check_output_schema_violation_rate(verdicts: list, baseline_path: Path, warn
         "baseline_violation_rate": round(base_rate, 6),
         "trend": trend,
         "warn_threshold": warn_threshold,
+        "violation_log_written": False,
     }
 
 
@@ -189,6 +214,11 @@ def main():
     parser.add_argument("--extractions", required=True)
     parser.add_argument("--verdicts", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument(
+        "--violation-log",
+        default="violation_log/violations.jsonl",
+        help="Append AI-extension WARN rows when output violation rate policy trips",
+    )
     args = parser.parse_args()
 
     extractions = load_jsonl(Path(args.extractions))
@@ -211,11 +241,21 @@ def main():
         )
 
     if args.mode in ("all", "output"):
-        out["output_violation_rate"] = check_output_schema_violation_rate(
+        vr = check_output_schema_violation_rate(
             verdicts=verdicts,
             baseline_path=Path("schema_snapshots/ai_output_violation_baseline.json"),
             warn_threshold=0.02,
         )
+        if vr.get("status") == "WARN":
+            append_ai_warn_to_violation_log(
+                Path(args.violation_log),
+                violation_rate=float(vr["violation_rate"]),
+                baseline_rate=float(vr.get("baseline_violation_rate") or 0.0),
+                trend=str(vr.get("trend", "")),
+                threshold=float(vr.get("warn_threshold", 0.02)),
+            )
+            vr["violation_log_written"] = True
+        out["output_violation_rate"] = vr
 
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)

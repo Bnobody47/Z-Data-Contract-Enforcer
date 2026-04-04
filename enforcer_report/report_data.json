@@ -1,10 +1,339 @@
 {
-  "generated_at": "2026-04-03T08:05:45.154293Z",
-  "data_health_score": 0,
-  "validated_contracts": [
-    "week3-document-refinery-extractions",
-    "week5-event-records"
+  "generated_at": "2026-04-04T15:24:24.623162Z",
+  "data_health_score": 0.0,
+  "health_score_detail": {
+    "formula": "(passed/total)*100 - 20*distinct_critical_failures",
+    "passed_checks": 283,
+    "total_checks": 289,
+    "distinct_critical_violations": 5
+  },
+  "violations_this_week": [
+    {
+      "violation_id": "d2d1386e-4fc5-466d-bd9c-75da8a2d79b7",
+      "check_id": "week3-document-refinery-extractions.fact_confidence.range",
+      "status": "FAIL",
+      "severity": "CRITICAL",
+      "failing_system": "Week-3-Document-Refinery",
+      "contract_id": "week3-document-refinery-extractions",
+      "failing_field": "extracted_facts.confidence",
+      "downstream_impact": "Subscribers at risk: week4-cartographer. Breaking meaning at 'extracted_facts.confidence' can propagate silent bad joins, ordering, or replay bugs.",
+      "records_failing": 60,
+      "blast_radius": {
+        "direct_subscribers": [
+          {
+            "subscriber_id": "week4-cartographer",
+            "subscriber_team": "week4",
+            "contact": "week4-team@org.com",
+            "reason": "used for node ranking; scale change (0.0\u20131.0 vs 0\u2013100) breaks ordering"
+          }
+        ],
+        "transitive_nodes": [],
+        "contamination_depth": 1,
+        "note": "direct_subscribers from contract registry; transitive_nodes enriched from lineage snapshot"
+      },
+      "blame_chain": [
+        {
+          "commit_hash": "a2449ea80e55285f092e725f5d5ad3b9963d6d6a",
+          "author": "Bnobody47",
+          "commit_timestamp": "2026-03-04 10:35:13 +0300",
+          "commit_message": "first commit",
+          "rank": 1,
+          "confidence_score": 0.0,
+          "file_path": "C:\\Users\\Bnobody_47\\Documents\\The-Document-Intelligence-Refinery\\.refinery\\extractions"
+        }
+      ]
+    },
+    {
+      "violation_id": "41a89e71-9dc9-42c1-88a3-fca81bec53ea",
+      "check_id": "week3-document-refinery-extractions.source_path.min_length",
+      "status": "FAIL",
+      "severity": "CRITICAL",
+      "failing_system": "Week-3-Document-Refinery",
+      "contract_id": "week3-document-refinery-extractions",
+      "failing_field": "source_path",
+      "downstream_impact": "Subscribers at risk: week4-cartographer. Breaking meaning at 'source_path' can propagate silent bad joins, ordering, or replay bugs.",
+      "records_failing": 1,
+      "blast_radius": {
+        "direct_subscribers": [
+          {
+            "subscriber_id": "week4-cartographer",
+            "subscriber_team": "week4",
+            "contact": "week4-team@org.com",
+            "reason": "provenance and prompt construction require a non-empty source URI/path"
+          }
+        ],
+        "transitive_nodes": [],
+        "contamination_depth": 1,
+        "note": "direct_subscribers from contract registry; transitive_nodes enriched from lineage snapshot"
+      },
+      "blame_chain": [
+        {
+          "commit_hash": "a2449ea80e55285f092e725f5d5ad3b9963d6d6a",
+          "author": "Bnobody47",
+          "commit_timestamp": "2026-03-04 10:35:13 +0300",
+          "commit_message": "first commit",
+          "rank": 1,
+          "confidence_score": 0.0,
+          "file_path": "C:\\Users\\Bnobody_47\\Documents\\The-Document-Intelligence-Refinery\\.refinery\\extractions"
+        }
+      ]
+    },
+    {
+      "violation_id": "dceb3bc7-087a-4db4-a42f-7850d28081d3",
+      "check_id": "week3.entity_refs.resolve_to_entities",
+      "status": "FAIL",
+      "severity": "CRITICAL",
+      "failing_system": "Week-3-Document-Refinery",
+      "contract_id": "week3-document-refinery-extractions",
+      "failing_field": "extracted_facts.entity_refs",
+      "downstream_impact": "Subscribers at risk: week4-cartographer. Breaking meaning at 'extracted_facts.entity_refs' can propagate silent bad joins, ordering, or replay bugs.",
+      "records_failing": 1,
+      "blast_radius": {
+        "direct_subscribers": [
+          {
+            "subscriber_id": "week4-cartographer",
+            "subscriber_team": "week4",
+            "contact": "week4-team@org.com",
+            "reason": "referenced entity IDs must resolve for graph metadata integrity"
+          }
+        ],
+        "transitive_nodes": [],
+        "contamination_depth": 1,
+        "note": "direct_subscribers from contract registry; transitive_nodes enriched from lineage snapshot"
+      },
+      "blame_chain": [
+        {
+          "commit_hash": "a2449ea80e55285f092e725f5d5ad3b9963d6d6a",
+          "author": "Bnobody47",
+          "commit_timestamp": "2026-03-04 10:35:13 +0300",
+          "commit_message": "first commit",
+          "rank": 1,
+          "confidence_score": 0.0,
+          "file_path": "C:\\Users\\Bnobody_47\\Documents\\The-Document-Intelligence-Refinery\\.refinery\\extractions"
+        }
+      ]
+    },
+    {
+      "violation_id": "d401b342-dd4c-492c-afc1-7f6fec14d1bd",
+      "check_id": "week3-document-refinery-extractions.fact_confidence.drift",
+      "status": "FAIL",
+      "severity": "HIGH",
+      "failing_system": "Week-3-Document-Refinery",
+      "contract_id": "week3-document-refinery-extractions",
+      "failing_field": "extracted_facts.confidence",
+      "downstream_impact": "Subscribers at risk: week4-cartographer. Breaking meaning at 'extracted_facts.confidence' can propagate silent bad joins, ordering, or replay bugs.",
+      "records_failing": 0,
+      "blast_radius": {
+        "direct_subscribers": [
+          {
+            "subscriber_id": "week4-cartographer",
+            "subscriber_team": "week4",
+            "contact": "week4-team@org.com",
+            "reason": "used for node ranking; scale change (0.0\u20131.0 vs 0\u2013100) breaks ordering"
+          }
+        ],
+        "transitive_nodes": [],
+        "contamination_depth": 1,
+        "note": "direct_subscribers from contract registry; transitive_nodes enriched from lineage snapshot"
+      },
+      "blame_chain": [
+        {
+          "commit_hash": "a2449ea80e55285f092e725f5d5ad3b9963d6d6a",
+          "author": "Bnobody47",
+          "commit_timestamp": "2026-03-04 10:35:13 +0300",
+          "commit_message": "first commit",
+          "rank": 1,
+          "confidence_score": 0.0,
+          "file_path": "C:\\Users\\Bnobody_47\\Documents\\The-Document-Intelligence-Refinery\\.refinery\\extractions"
+        }
+      ]
+    }
   ],
+  "schema_changes_detected": {
+    "week3": {
+      "contract_id": "week3-document-refinery-extractions",
+      "old_snapshot": "schema_snapshots\\week3-document-refinery-extractions\\20260403_080206.yaml",
+      "new_snapshot": "schema_snapshots\\week3-document-refinery-extractions\\20260403_080258.yaml",
+      "compatibility_verdict": "BREAKING",
+      "breaking_fields": [
+        "fact_confidence"
+      ],
+      "changes": [
+        {
+          "field": "doc_id",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for doc_id."
+        },
+        {
+          "field": "extracted_at",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for extracted_at."
+        },
+        {
+          "field": "extraction_model",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for extraction_model."
+        },
+        {
+          "field": "fact_confidence",
+          "verdict": "BREAKING",
+          "reason": "Confidence scale drift for fact_confidence: max 0.976 -> 97.6 (0\u20131 -> 0\u2013100)."
+        },
+        {
+          "field": "fact_entity_refs",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for fact_entity_refs."
+        },
+        {
+          "field": "fact_fact_id",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for fact_fact_id."
+        },
+        {
+          "field": "fact_page_ref",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for fact_page_ref."
+        },
+        {
+          "field": "fact_source_excerpt",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for fact_source_excerpt."
+        },
+        {
+          "field": "fact_text",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for fact_text."
+        },
+        {
+          "field": "processing_time_ms",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for processing_time_ms."
+        },
+        {
+          "field": "source_hash",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for source_hash."
+        },
+        {
+          "field": "source_path",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for source_path."
+        },
+        {
+          "field": "token_input",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for token_input."
+        },
+        {
+          "field": "token_output",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for token_output."
+        }
+      ],
+      "migration_impact_report": {
+        "diff_summary": "Schema + stats were compared field-by-field. Confidence drift is classified via stats when max/mean indicate a 0\u20131 -> 0\u2013100 rescale.",
+        "migration_checklist": [
+          "Coordinate a migration for field 'fact_confidence': update producers/consumers and re-establish statistical baselines after deploying changes.",
+          "Update contract(s) with new bounds/ranges, then re-run ValidationRunner in AUDIT mode to confirm zero false positives."
+        ],
+        "rollback_plan": [
+          "Roll back producer changes to the previous snapshot-producing version.",
+          "Re-run ValidationRunner on the rolled-back data to confirm baselines and structural checks return to PASS.",
+          "Apply migration with explicit deprecation/alias strategy and communicate blast radius to subscribers via the registry."
+        ]
+      }
+    },
+    "week5": {
+      "contract_id": "week5-event-records",
+      "old_snapshot": "schema_snapshots\\week5-event-records\\20260403_080215.yaml",
+      "new_snapshot": "schema_snapshots\\week5-event-records\\20260403_080315.yaml",
+      "compatibility_verdict": "COMPATIBLE",
+      "breaking_fields": [],
+      "changes": [
+        {
+          "field": "aggregate_id",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for aggregate_id."
+        },
+        {
+          "field": "aggregate_type",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for aggregate_type."
+        },
+        {
+          "field": "event_id",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for event_id."
+        },
+        {
+          "field": "event_type",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for event_type."
+        },
+        {
+          "field": "occurred_at",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for occurred_at."
+        },
+        {
+          "field": "recorded_at",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for recorded_at."
+        },
+        {
+          "field": "schema_version",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for schema_version."
+        },
+        {
+          "field": "sequence_number",
+          "verdict": "COMPATIBLE",
+          "reason": "No breaking material change detected for sequence_number."
+        }
+      ],
+      "migration_impact_report": {
+        "diff_summary": "Schema + stats were compared field-by-field. Confidence drift is classified via stats when max/mean indicate a 0\u20131 -> 0\u2013100 rescale.",
+        "migration_checklist": [
+          "No breaking changes detected: re-run ValidationRunner on a fresh snapshot after the next release."
+        ],
+        "rollback_plan": []
+      }
+    }
+  },
+  "ai_system_risk_assessment": {
+    "source_file": "validation_reports\\ai_extensions_violated.json",
+    "embedding_drift": {
+      "status": "PASS",
+      "drift_score": 0.000277,
+      "threshold": 0.15,
+      "interpretation": "stable"
+    },
+    "prompt_input_validation": {
+      "status": "FAIL",
+      "valid_count": 59,
+      "quarantined_count": 1,
+      "quarantine_file": "outputs\\quarantine\\trace_prompt_quarantine.jsonl"
+    },
+    "output_violation_rate": {
+      "status": "WARN",
+      "total_outputs": 60,
+      "schema_violations": 1,
+      "violation_rate": 0.016667,
+      "baseline_violation_rate": 0.0,
+      "trend": "rising",
+      "warn_threshold": 0.02
+    },
+    "summary": "AI risk is driven by embedding centroid drift vs schema_snapshots/embedding_baselines.npz, prompt JSON Schema validation with quarantine under outputs/quarantine/trace_prompt_quarantine.jsonl, and Week 2 verdict enum drift vs schema_snapshots/ai_output_violation_baseline.json."
+  },
+  "recommended_actions": [
+    "Inspect `outputs/week3/extractions.jsonl` against `generated_contracts/week3_extractions.yaml` for check_id `week3-document-refinery-extractions.fact_confidence.range`; fix the producer, then run `python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions.jsonl --output validation_reports/post_fix.json --mode AUDIT`.",
+    "Inspect `outputs/week3/extractions.jsonl` against `generated_contracts/week3_extractions.yaml` for check_id `week3-document-refinery-extractions.source_path.min_length`; fix the producer, then run `python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions.jsonl --output validation_reports/post_fix.json --mode AUDIT`.",
+    "Inspect `outputs/week3/extractions.jsonl` against `generated_contracts/week3_extractions.yaml` for check_id `week3.entity_refs.resolve_to_entities`; fix the producer, then run `python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions.jsonl --output validation_reports/post_fix.json --mode AUDIT`."
+  ],
+  "sources": {
+    "violation_log": "violation_log\\violations.jsonl",
+    "validation_reports_glob": "validation_reports/*.json"
+  },
   "evidence": [
     {
       "report_id": "587fc76c-c17d-498f-b20e-cc4d5bda5b09",
@@ -48,112 +377,5 @@
       "snapshot_id": "4a9bcb43223982ab4e2377e573e9b0f2ecda9ac6e5720f619da6bbba43b924c1",
       "run_timestamp": "2026-04-03T08:03:37.634505Z"
     }
-  ],
-  "top_violations": [
-    {
-      "violation_id": "d2d1386e-4fc5-466d-bd9c-75da8a2d79b7",
-      "check_id": "week3-document-refinery-extractions.fact_confidence.range",
-      "status": "FAIL",
-      "severity": "CRITICAL",
-      "failing_field": "extracted_facts.confidence",
-      "records_failing": 60,
-      "explanation": "week3-document-refinery-extractions.fact_confidence.range failed (FAIL). This indicates a contract-breaking meaning/structure change at 'extracted_facts.confidence' that downstream consumers in the registry blast radius should treat as a risk.",
-      "blast_radius": {
-        "direct_subscribers": [
-          {
-            "subscriber_id": "week4-cartographer",
-            "subscriber_team": "week4",
-            "contact": "week4-team@org.com",
-            "reason": "used for node ranking; scale change (0.0\u20131.0 vs 0\u2013100) breaks ordering"
-          }
-        ],
-        "transitive_nodes": [],
-        "contamination_depth": 1,
-        "note": "direct_subscribers from contract registry; transitive_nodes enriched from lineage snapshot"
-      },
-      "blame_chain": [
-        {
-          "commit_hash": "a2449ea80e55285f092e725f5d5ad3b9963d6d6a",
-          "author": "Bnobody47",
-          "commit_timestamp": "2026-03-04 10:35:13 +0300",
-          "commit_message": "first commit",
-          "rank": 1,
-          "confidence_score": 0.0,
-          "file_path": "C:\\Users\\Bnobody_47\\Documents\\The-Document-Intelligence-Refinery\\.refinery\\extractions"
-        }
-      ]
-    },
-    {
-      "violation_id": "41a89e71-9dc9-42c1-88a3-fca81bec53ea",
-      "check_id": "week3-document-refinery-extractions.source_path.min_length",
-      "status": "FAIL",
-      "severity": "CRITICAL",
-      "failing_field": "source_path",
-      "records_failing": 1,
-      "explanation": "week3-document-refinery-extractions.source_path.min_length failed (FAIL). This indicates a contract-breaking meaning/structure change at 'source_path' that downstream consumers in the registry blast radius should treat as a risk.",
-      "blast_radius": {
-        "direct_subscribers": [
-          {
-            "subscriber_id": "week4-cartographer",
-            "subscriber_team": "week4",
-            "contact": "week4-team@org.com",
-            "reason": "provenance and prompt construction require a non-empty source URI/path"
-          }
-        ],
-        "transitive_nodes": [],
-        "contamination_depth": 1,
-        "note": "direct_subscribers from contract registry; transitive_nodes enriched from lineage snapshot"
-      },
-      "blame_chain": [
-        {
-          "commit_hash": "a2449ea80e55285f092e725f5d5ad3b9963d6d6a",
-          "author": "Bnobody47",
-          "commit_timestamp": "2026-03-04 10:35:13 +0300",
-          "commit_message": "first commit",
-          "rank": 1,
-          "confidence_score": 0.0,
-          "file_path": "C:\\Users\\Bnobody_47\\Documents\\The-Document-Intelligence-Refinery\\.refinery\\extractions"
-        }
-      ]
-    },
-    {
-      "violation_id": "dceb3bc7-087a-4db4-a42f-7850d28081d3",
-      "check_id": "week3.entity_refs.resolve_to_entities",
-      "status": "FAIL",
-      "severity": "CRITICAL",
-      "failing_field": "extracted_facts.entity_refs",
-      "records_failing": 1,
-      "explanation": "week3.entity_refs.resolve_to_entities failed (FAIL). This indicates a contract-breaking meaning/structure change at 'extracted_facts.entity_refs' that downstream consumers in the registry blast radius should treat as a risk.",
-      "blast_radius": {
-        "direct_subscribers": [
-          {
-            "subscriber_id": "week4-cartographer",
-            "subscriber_team": "week4",
-            "contact": "week4-team@org.com",
-            "reason": "referenced entity IDs must resolve for graph metadata integrity"
-          }
-        ],
-        "transitive_nodes": [],
-        "contamination_depth": 1,
-        "note": "direct_subscribers from contract registry; transitive_nodes enriched from lineage snapshot"
-      },
-      "blame_chain": [
-        {
-          "commit_hash": "a2449ea80e55285f092e725f5d5ad3b9963d6d6a",
-          "author": "Bnobody47",
-          "commit_timestamp": "2026-03-04 10:35:13 +0300",
-          "commit_message": "first commit",
-          "rank": 1,
-          "confidence_score": 0.0,
-          "file_path": "C:\\Users\\Bnobody_47\\Documents\\The-Document-Intelligence-Refinery\\.refinery\\extractions"
-        }
-      ]
-    }
-  ],
-  "recommendations": [
-    "Mitigate 'extracted_facts.confidence': update producers/consumers and re-run ValidationRunner in AUDIT mode; then promote to ENFORCE once baselines and expectations are updated.",
-    "Mitigate 'source_path': update producers/consumers and re-run ValidationRunner in AUDIT mode; then promote to ENFORCE once baselines and expectations are updated.",
-    "Mitigate 'extracted_facts.entity_refs': update producers/consumers and re-run ValidationRunner in AUDIT mode; then promote to ENFORCE once baselines and expectations are updated."
-  ],
-  "violation_log_source": "violation_log\\violations.jsonl"
+  ]
 }

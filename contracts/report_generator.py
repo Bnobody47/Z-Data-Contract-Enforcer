@@ -1,6 +1,5 @@
 import argparse
 import json
-import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -11,6 +10,15 @@ def iso_now():
 
 def load_json(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def load_json_optional(path: Path):
+    if not path.exists():
+        return None
+    try:
+        return load_json(path)
+    except Exception:
+        return None
 
 
 def load_violations_jsonl(path: Path):
@@ -31,7 +39,6 @@ def load_validation_reports(pattern: str = "validation_reports/*.json"):
     for p in Path(".").glob(pattern):
         try:
             obj = load_json(p)
-            # Only include ValidationRunner artifacts (they have `results` as a list of check rows).
             if isinstance(obj, dict) and isinstance(obj.get("results"), list) and obj.get("contract_id"):
                 reports.append(obj)
         except Exception:
@@ -39,113 +46,188 @@ def load_validation_reports(pattern: str = "validation_reports/*.json"):
     return reports
 
 
-def severity_weight(status: str):
-    if status == "ERROR":
-        return 25
-    if status == "FAIL":
-        return 20
-    if status == "WARN":
-        return 8
-    return 0
-
-
-def compute_health_score(validation_reports: list):
-    # Start from 100 and deduct for each FAIL/ERROR result.
-    score = 100.0
-    evidence = []
-    for rep in validation_reports:
-        rid = rep.get("report_id")
-        contract_id = rep.get("contract_id")
-        snap = rep.get("snapshot_id")
-        run_ts = rep.get("run_timestamp")
-        evidence.append({"report_id": rid, "contract_id": contract_id, "snapshot_id": snap, "run_timestamp": run_ts})
-
+def compute_health_score_rubric(reports: list):
+    """
+    Rubric: (checks_passed / total_checks) * 100 minus 20 points per distinct CRITICAL violation (FAIL/ERROR).
+    """
+    total_checks = 0
+    passed_checks = 0
+    critical_keys = set()
+    for rep in reports:
+        cid = rep.get("contract_id")
         for r in rep.get("results", []) or []:
-            w = severity_weight(r.get("status"))
-            score -= w
-    return max(0, round(score, 2)), evidence
+            total_checks += 1
+            if r.get("status") == "PASS":
+                passed_checks += 1
+            if r.get("status") in ("FAIL", "ERROR") and str(r.get("severity", "")).upper() == "CRITICAL":
+                critical_keys.add((cid, r.get("check_id")))
+    base = (passed_checks / total_checks) * 100.0 if total_checks else 100.0
+    deduction = 20 * len(critical_keys)
+    score = max(0.0, base - deduction)
+    return round(score, 2), passed_checks, total_checks, len(critical_keys)
 
 
-def build_plain_language(violation_entry: dict, validation_reports: list):
-    check_id = violation_entry.get("check_id", "")
-    failing_field = violation_entry.get("failing_field", "")
+def contract_yaml_path_for(contract_id: str) -> str:
+    m = {
+        "week3-document-refinery-extractions": "generated_contracts/week3_extractions.yaml",
+        "week5-event-records": "generated_contracts/week5_events.yaml",
+    }
+    return m.get(contract_id, f"generated_contracts/{contract_id.replace('-', '_')}.yaml")
 
-    # Find matching validation check row if present.
-    matched = None
+
+def best_match_result(validation_reports: list, check_id: str):
+    best = None
     for rep in validation_reports:
         for rr in rep.get("results", []) or []:
-            if rr.get("check_id") == check_id:
-                # Prefer the most severe outcome if multiple snapshots share the same check_id.
-                if matched is None:
-                    matched = rr
-                else:
-                    order = {"ERROR": 3, "FAIL": 2, "WARN": 1, "PASS": 0}
-                    if order.get(rr.get("status"), 0) > order.get(matched.get("status"), 0):
-                        matched = rr
+            if rr.get("check_id") != check_id:
+                continue
+            if best is None:
+                best = (rep, rr)
+            else:
+                order = {"ERROR": 3, "FAIL": 2, "WARN": 1, "PASS": 0}
+                if order.get(rr.get("status"), 0) > order.get(best[1].get("status"), 0):
+                    best = (rep, rr)
+    return best
 
-    status = matched.get("status") if matched else "FAIL"
-    records_failing = matched.get("records_failing") if matched else violation_entry.get("records_failing")
-    severity = matched.get("severity") if matched else None
+
+def build_violation_narrative(v: dict, validation_reports: list):
+    check_id = v.get("check_id", "")
+    failing_field = v.get("failing_field", "")
+    rep_rr = best_match_result(validation_reports, check_id)
+    rep, rr = rep_rr if rep_rr else (None, None)
+    contract_id = (rep or {}).get("contract_id") or "unknown-contract"
+    failing_system = "Week-3-Document-Refinery" if "week3" in str(contract_id) else (
+        "Week-5-Z-Ledger" if "week5" in str(contract_id) else "upstream-producer"
+    )
+    status = (rr or {}).get("status", v.get("status", "FAIL"))
+    severity = (rr or {}).get("severity", v.get("severity"))
+    br = v.get("blast_radius") or {}
+    subscribers = br.get("registry_subscribers") or br.get("direct_subscribers") or []
+    downstream = ", ".join(str(s.get("subscriber_id")) for s in subscribers[:4]) or "see contract_registry/subscriptions.yaml"
+
     return {
-        "violation_id": violation_entry.get("violation_id"),
+        "violation_id": v.get("violation_id"),
         "check_id": check_id,
         "status": status,
         "severity": severity,
+        "failing_system": failing_system,
+        "contract_id": contract_id,
         "failing_field": failing_field,
-        "records_failing": records_failing,
-        "explanation": f"{check_id} failed ({status}). This indicates a contract-breaking meaning/structure change at '{failing_field}' that downstream consumers in the registry blast radius should treat as a risk.",
-        "blast_radius": violation_entry.get("blast_radius", {}),
-        "blame_chain": violation_entry.get("blame_chain", []),
+        "downstream_impact": (
+            f"Subscribers at risk: {downstream}. "
+            f"Breaking meaning at '{failing_field}' can propagate silent bad joins, ordering, or replay bugs."
+        ),
+        "records_failing": (rr or {}).get("records_failing", v.get("records_failing")),
+        "blast_radius": v.get("blast_radius", {}),
+        "blame_chain": v.get("blame_chain", []),
     }
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", required=True, help="enforcer_report/report_data.json")
+    parser.add_argument("--output", required=True)
+    parser.add_argument(
+        "--violations",
+        default="violation_log/violations.jsonl",
+        help="Path consistent with violation_log/ (data-driven)",
+    )
+    parser.add_argument(
+        "--validation-glob",
+        default="validation_reports/*.json",
+        help="Glob consistent with validation_reports/ (excludes non-runner JSON by loader filter)",
+    )
+    parser.add_argument("--schema-week3", default="validation_reports/schema_evolution_week3.json")
+    parser.add_argument("--schema-week5", default="validation_reports/schema_evolution_week5.json")
+    parser.add_argument("--ai-extensions", default="validation_reports/ai_extensions_violated.json")
     args = parser.parse_args()
 
-    validation_reports = load_validation_reports()
-    violations_path = Path("violation_log/violations.jsonl")
+    violations_path = Path(args.violations)
+    validation_reports = load_validation_reports(args.validation_glob)
     violations = load_violations_jsonl(violations_path)
-    score, evidence = compute_health_score(validation_reports)
+    score, passed_checks, total_checks, crit_count = compute_health_score_rubric(validation_reports)
 
-    # Take top-3 violations by failing records, then stable order.
     violations_sorted = sorted(
         violations,
         key=lambda v: int(v.get("records_failing", 0) or 0),
         reverse=True,
     )
-    top = violations_sorted[:3]
+    top = violations_sorted[:5]
+    violations_section = [build_violation_narrative(v, validation_reports) for v in top]
 
-    top_plain = [build_plain_language(v, validation_reports) for v in top]
+    schema_section = {
+        "week3": load_json_optional(Path(args.schema_week3)),
+        "week5": load_json_optional(Path(args.schema_week5)),
+    }
 
-    # Recommendations: short and actionable, derived from blast_radius+check_ids.
+    ai_path = Path(args.ai_extensions)
+    ai_data = load_json_optional(ai_path)
+    if ai_data is None:
+        ai_data = load_json_optional(Path("validation_reports/ai_extensions_baseline.json"))
+    ai_section = {
+        "source_file": str(ai_path) if ai_path.exists() else "validation_reports/ai_extensions_baseline.json",
+        "embedding_drift": (ai_data or {}).get("embedding_drift"),
+        "prompt_input_validation": (ai_data or {}).get("prompt_input_validation"),
+        "output_violation_rate": (ai_data or {}).get("output_violation_rate"),
+        "summary": (
+            "AI risk is driven by embedding centroid drift vs schema_snapshots/embedding_baselines.npz, "
+            "prompt JSON Schema validation with quarantine under outputs/quarantine/trace_prompt_quarantine.jsonl, "
+            "and Week 2 verdict enum drift vs schema_snapshots/ai_output_violation_baseline.json."
+        ),
+    }
+
     recs = []
-    for v in top_plain:
-        fc = v.get("failing_field") or "unknown_field"
-        recs.append(f"Mitigate '{fc}': update producers/consumers and re-run ValidationRunner in AUDIT mode; then promote to ENFORCE once baselines and expectations are updated.")
+    for nar in violations_section[:3]:
+        cid = nar.get("contract_id", "week3-document-refinery-extractions")
+        cy = contract_yaml_path_for(cid)
+        chk = nar.get("check_id", "")
+        data_path = "outputs/week5/events.jsonl" if "week5" in str(cid) else "outputs/week3/extractions.jsonl"
+        recs.append(
+            f"Inspect `{data_path}` against `{cy}` for check_id `{chk}`; "
+            f"fix the producer, then run "
+            f"`python contracts/runner.py --contract {cy} --data {data_path} "
+            f"--output validation_reports/post_fix.json --mode AUDIT`."
+        )
+    if not recs:
+        recs.append(
+            "No violation_log rows: run `python contracts/runner.py` on clean data and keep "
+            "`generated_contracts/week3_extractions.yaml` + `generated_contracts/week5_events.yaml` as the source of truth."
+        )
+
+    evidence = [
+        {
+            "report_id": r.get("report_id"),
+            "contract_id": r.get("contract_id"),
+            "snapshot_id": r.get("snapshot_id"),
+            "run_timestamp": r.get("run_timestamp"),
+        }
+        for r in validation_reports
+    ]
+
+    report = {
+        "generated_at": iso_now(),
+        "data_health_score": score,
+        "health_score_detail": {
+            "formula": "(passed/total)*100 - 20*distinct_critical_failures",
+            "passed_checks": passed_checks,
+            "total_checks": total_checks,
+            "distinct_critical_violations": crit_count,
+        },
+        "violations_this_week": violations_section,
+        "schema_changes_detected": schema_section,
+        "ai_system_risk_assessment": ai_section,
+        "recommended_actions": recs,
+        "sources": {
+            "violation_log": str(violations_path),
+            "validation_reports_glob": args.validation_glob,
+        },
+        "evidence": evidence,
+    }
 
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(
-        json.dumps(
-            {
-                "generated_at": iso_now(),
-                "data_health_score": score,
-                "validated_contracts": sorted(set(r.get("contract_id") for r in validation_reports if r.get("contract_id"))),
-                "evidence": evidence,
-                "top_violations": top_plain,
-                "recommendations": recs[:3],
-                "violation_log_source": str(violations_path),
-            },
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
-
+    out_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(f"Wrote enforcer report data: {out_path}")
 
 
 if __name__ == "__main__":
     main()
-

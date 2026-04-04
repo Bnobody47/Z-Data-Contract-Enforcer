@@ -14,19 +14,21 @@ python -m pip install -r requirements.txt
 
 ## 2. Baseline contracts + validation baselines (clean data)
 
-Contracts and dbt counterparts are generated from your Week 3/5 sample outputs:
+Contracts and dbt counterparts are generated from your Week 3/5 sample outputs. The generator also writes **statistical baselines** (`schema_snapshots/baselines_<contract>.json` and `schema_snapshots/baselines.json`), optional **LLM column annotations** (set `OPENAI_API_KEY`), and **downstream consumers** from Week 4 lineage when `--lineage` is passed.
 
 ```powershell
-python contracts\generator.py --source outputs\week3\extractions.jsonl --contract-id week3-document-refinery-extractions --output generated_contracts
-python contracts\generator.py --source outputs\week5\events.jsonl --contract-id week5-event-records --output generated_contracts
+python contracts\generator.py --source outputs\week3\extractions.jsonl --contract-id week3-document-refinery-extractions --lineage outputs\week4\lineage_snapshots.jsonl --output generated_contracts
+python contracts\generator.py --source outputs\week5\events.jsonl --contract-id week5-event-records --lineage outputs\week4\lineage_snapshots.jsonl --output generated_contracts
 ```
 
-Then create statistical drift baselines (runner writes baselines into `schema_snapshots/` the first time it runs per contract):
+Then create or refresh **runner** statistical drift baselines (first run per contract writes `schema_snapshots/baselines_<contract>.json` if missing):
 
 ```powershell
-python contracts\runner.py --contract generated_contracts\week3_extractions.yaml --data outputs\week3\extractions.jsonl --output validation_reports\week3_clean_baseline.json
-python contracts\runner.py --contract generated_contracts\week5_events.yaml --data outputs\week5\events.jsonl --output validation_reports\week5_clean_baseline.json
+python contracts\runner.py --contract generated_contracts\week3_extractions.yaml --data outputs\week3\extractions.jsonl --output validation_reports\week3_clean_baseline.json --mode AUDIT
+python contracts\runner.py --contract generated_contracts\week5_events.yaml --data outputs\week5\events.jsonl --output validation_reports\week5_clean_baseline.json --mode AUDIT
 ```
+
+Use `--mode WARN` (block on CRITICAL FAIL/ERROR) or `--mode ENFORCE` (block on CRITICAL or HIGH) for pipeline gates.
 
 ## 3. Create violated datasets (for final evidence)
 
@@ -42,16 +44,16 @@ python scripts\create_week2_verdicts_violation.py --input outputs\week2\verdicts
 This appends schema snapshots into `schema_snapshots/<contract-id>/` so `schema_analyzer.py` can diff the two.
 
 ```powershell
-python contracts\generator.py --source outputs\week3\extractions_violated_scale_change.jsonl --contract-id week3-document-refinery-extractions --output generated_contracts
-python contracts\generator.py --source outputs\week5\events_violated_temporal_and_sequence.jsonl --contract-id week5-event-records --output generated_contracts
+python contracts\generator.py --source outputs\week3\extractions_violated_scale_change.jsonl --contract-id week3-document-refinery-extractions --lineage outputs\week4\lineage_snapshots.jsonl --output generated_contracts
+python contracts\generator.py --source outputs\week5\events_violated_temporal_and_sequence.jsonl --contract-id week5-event-records --lineage outputs\week4\lineage_snapshots.jsonl --output generated_contracts
 ```
 
 ## 5. Validate violated datasets
 
 ```powershell
-python contracts\runner.py --contract generated_contracts\week3_extractions.yaml --data outputs\week3\extractions_violated_scale_change.jsonl --output validation_reports\violated_week3_scale.json
-python contracts\runner.py --contract generated_contracts\week3_extractions.yaml --data outputs\week3\extractions_violated_entity_refs.jsonl --output validation_reports\violated_week3_entity_refs.json
-python contracts\runner.py --contract generated_contracts\week5_events.yaml --data outputs\week5\events_violated_temporal_and_sequence.jsonl --output validation_reports\violated_week5.json
+python contracts\runner.py --contract generated_contracts\week3_extractions.yaml --data outputs\week3\extractions_violated_scale_change.jsonl --output validation_reports\violated_week3_scale.json --mode AUDIT
+python contracts\runner.py --contract generated_contracts\week3_extractions.yaml --data outputs\week3\extractions_violated_entity_refs.jsonl --output validation_reports\violated_week3_entity_refs.json --mode AUDIT
+python contracts\runner.py --contract generated_contracts\week5_events.yaml --data outputs\week5\events_violated_temporal_and_sequence.jsonl --output validation_reports\violated_week5.json --mode AUDIT
 ```
 
 ## 6. Attribute violations (build `violation_log/violations.jsonl`)
@@ -69,6 +71,8 @@ python contracts\attributor.py --violation validation_reports\violated_week3_ent
 ```powershell
 python contracts\schema_analyzer.py --contract-id week3-document-refinery-extractions --output validation_reports\schema_evolution_week3.json
 python contracts\schema_analyzer.py --contract-id week5-event-records --output validation_reports\schema_evolution_week5.json
+# Optional: only consider snapshots on/after a date (ISO):
+# python contracts\schema_analyzer.py --contract-id week3-document-refinery-extractions --since 2026-04-01T00:00:00Z --output validation_reports\schema_evolution_week3.json
 ```
 
 ## 8. Run AI-specific extensions
@@ -82,8 +86,8 @@ This runs:
 # Baselines
 python contracts\ai_extensions.py --mode all --extractions outputs\week3\extractions.jsonl --verdicts outputs\week2\verdicts.jsonl --output validation_reports\ai_extensions_baseline.json
 
-# Violated run
-python contracts\ai_extensions.py --mode all --extractions outputs\week3\extractions_violated_scale_change.jsonl --verdicts outputs\week2\verdicts_violated_output_schema.jsonl --output validation_reports\ai_extensions_violated.json
+# Violated run (appends a WARN row to violation_log/violations.jsonl when output violation rate policy trips)
+python contracts\ai_extensions.py --mode all --extractions outputs\week3\extractions_violated_scale_change.jsonl --verdicts outputs\week2\verdicts_violated_output_schema.jsonl --output validation_reports\ai_extensions_violated.json --violation-log violation_log\violations.jsonl
 ```
 
 ## 9. Generate final enforcer report JSON

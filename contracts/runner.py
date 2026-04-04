@@ -2,8 +2,9 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -292,11 +293,40 @@ def evaluate_constraints(contract: dict, records: list, results: list):
             )
 
 
+def should_enforcement_block(mode: str, results: list) -> tuple[bool, list]:
+    """
+    AUDIT: never block.
+    WARN: block on CRITICAL severity when check failed (FAIL/ERROR).
+    ENFORCE: block on CRITICAL or HIGH when check failed (FAIL/ERROR).
+    Statistical drift FAIL is independent from fact_confidence.range FAIL (both may fire on 0–1 → 0–100).
+    """
+    if mode.upper() == "AUDIT":
+        return False, []
+    block_reasons = []
+    for r in results:
+        if r.get("status") not in ("FAIL", "ERROR"):
+            continue
+        sev = str(r.get("severity", "")).upper()
+        if mode.upper() == "WARN":
+            if sev == "CRITICAL":
+                block_reasons.append(f"{r.get('check_id')}: {r.get('status')} ({sev})")
+        elif mode.upper() == "ENFORCE":
+            if sev in ("CRITICAL", "HIGH"):
+                block_reasons.append(f"{r.get('check_id')}: {r.get('status')} ({sev})")
+    return bool(block_reasons), block_reasons
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--contract", required=True)
     parser.add_argument("--data", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument(
+        "--mode",
+        default="AUDIT",
+        choices=["AUDIT", "WARN", "ENFORCE"],
+        help="AUDIT=log only; WARN=exit 1 on CRITICAL FAIL/ERROR; ENFORCE=exit 1 on CRITICAL/HIGH FAIL/ERROR",
+    )
     args = parser.parse_args()
 
     contract = yaml.safe_load(Path(args.contract).read_text(encoding="utf-8"))
@@ -604,7 +634,7 @@ def main():
                     "status": status,
                     "actual_value": f"z={z}",
                     "expected": "z<=2 warn threshold, z<=3 fail threshold",
-                    "severity": "HIGH" if status == "FAIL" else ("MEDIUM" if status == "WARN" else "LOW"),
+                    "severity": "HIGH" if status == "FAIL" else ("WARNING" if status == "WARN" else "LOW"),
                     "records_failing": 0,
                     "sample_failing": [],
                     "message": msg,
@@ -621,22 +651,30 @@ def main():
             }
         with baseline_file.open("w", encoding="utf-8") as f:
             json.dump(
-                {"contract_id": contract_id, "written_at": datetime.utcnow().isoformat(), "columns": columns},
+                {
+                    "contract_id": contract_id,
+                    "written_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                    "columns": columns,
+                },
                 f,
                 indent=2,
             )
 
     passed, failed, warned, errored = status_counters(results)
+    blocked, block_reasons = should_enforcement_block(args.mode, results)
     report = {
         "report_id": str(uuid.uuid4()),
         "contract_id": contract["id"],
         "snapshot_id": hashlib.sha256(raw_data.encode("utf-8")).hexdigest(),
-        "run_timestamp": datetime.utcnow().isoformat() + "Z",
+        "run_timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "total_checks": len(results),
         "passed": passed,
         "failed": failed,
         "warned": warned,
         "errored": errored,
+        "enforcement_mode": args.mode,
+        "blocked": blocked,
+        "block_reasons": block_reasons,
         "results": results,
     }
 
@@ -645,6 +683,9 @@ def main():
     with output.open("w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
     print(f"Wrote report: {output}")
+    if blocked:
+        print(f"ENFORCEMENT: pipeline blocked ({args.mode}): {len(block_reasons)} reason(s).", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
