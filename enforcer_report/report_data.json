@@ -1,11 +1,30 @@
 {
-  "generated_at": "2026-04-04T15:24:24.623162Z",
+  "report_meta": {
+    "classification": "auto_generated_enforcer_report",
+    "generator_script": "contracts/report_generator.py",
+    "inputs_read": [
+      "violation_log\\violations.jsonl",
+      "validation_reports/*.json",
+      "validation_reports/schema_evolution_week3.json",
+      "validation_reports/schema_evolution_week5.json",
+      "validation_reports\\ai_extensions_violated.json"
+    ]
+  },
+  "generated_at": "2026-04-04T17:51:04.642774Z",
   "data_health_score": 0.0,
   "health_score_detail": {
     "formula": "(passed/total)*100 - 20*distinct_critical_failures",
+    "formula_plain": "checks_passed / total_checks * 100, minus 20 points per distinct CRITICAL failing check_id",
     "passed_checks": 283,
     "total_checks": 289,
     "distinct_critical_violations": 5
+  },
+  "violations_by_severity": {
+    "breakdown": {
+      "FAIL/CRITICAL": 5,
+      "FAIL/HIGH": 1
+    },
+    "total_non_pass_checks": 6
   },
   "violations_this_week": [
     {
@@ -325,10 +344,63 @@
     },
     "summary": "AI risk is driven by embedding centroid drift vs schema_snapshots/embedding_baselines.npz, prompt JSON Schema validation with quarantine under outputs/quarantine/trace_prompt_quarantine.jsonl, and Week 2 verdict enum drift vs schema_snapshots/ai_output_violation_baseline.json."
   },
+  "recommended_actions_prioritised": [
+    {
+      "priority": 1,
+      "data_file": "outputs/week3/extractions_violated_scale_change.jsonl",
+      "contract_file": "generated_contracts/week3_extractions.yaml",
+      "field": "extracted_facts.confidence",
+      "contract_clause_check_id": "week3-document-refinery-extractions.fact_confidence.range",
+      "action": "Fix producer output in `outputs/week3/extractions_violated_scale_change.jsonl` so `extracted_facts.confidence` satisfies clause `week3-document-refinery-extractions.fact_confidence.range` in `generated_contracts/week3_extractions.yaml`; verify with `python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions_violated_scale_change.jsonl --output validation_reports/post_fix.json --mode AUDIT`.",
+      "verify_command": "python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions_violated_scale_change.jsonl --output validation_reports/post_fix.json --mode AUDIT"
+    },
+    {
+      "priority": 2,
+      "data_file": "outputs/week3/extractions_violated_scale_change.jsonl",
+      "contract_file": "generated_contracts/week3_extractions.yaml",
+      "field": "source_path",
+      "contract_clause_check_id": "week3-document-refinery-extractions.source_path.min_length",
+      "action": "Fix producer output in `outputs/week3/extractions_violated_scale_change.jsonl` so `source_path` satisfies clause `week3-document-refinery-extractions.source_path.min_length` in `generated_contracts/week3_extractions.yaml`; verify with `python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions_violated_scale_change.jsonl --output validation_reports/post_fix.json --mode AUDIT`.",
+      "verify_command": "python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions_violated_scale_change.jsonl --output validation_reports/post_fix.json --mode AUDIT"
+    },
+    {
+      "priority": 3,
+      "data_file": "outputs/week3/extractions_violated_entity_refs.jsonl",
+      "contract_file": "generated_contracts/week3_extractions.yaml",
+      "field": "extracted_facts.entity_refs",
+      "contract_clause_check_id": "week3.entity_refs.resolve_to_entities",
+      "action": "Fix producer output in `outputs/week3/extractions_violated_entity_refs.jsonl` so `extracted_facts.entity_refs` satisfies clause `week3.entity_refs.resolve_to_entities` in `generated_contracts/week3_extractions.yaml`; verify with `python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions_violated_entity_refs.jsonl --output validation_reports/post_fix.json --mode AUDIT`.",
+      "verify_command": "python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions_violated_entity_refs.jsonl --output validation_reports/post_fix.json --mode AUDIT"
+    }
+  ],
   "recommended_actions": [
-    "Inspect `outputs/week3/extractions.jsonl` against `generated_contracts/week3_extractions.yaml` for check_id `week3-document-refinery-extractions.fact_confidence.range`; fix the producer, then run `python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions.jsonl --output validation_reports/post_fix.json --mode AUDIT`.",
-    "Inspect `outputs/week3/extractions.jsonl` against `generated_contracts/week3_extractions.yaml` for check_id `week3-document-refinery-extractions.source_path.min_length`; fix the producer, then run `python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions.jsonl --output validation_reports/post_fix.json --mode AUDIT`.",
-    "Inspect `outputs/week3/extractions.jsonl` against `generated_contracts/week3_extractions.yaml` for check_id `week3.entity_refs.resolve_to_entities`; fix the producer, then run `python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions.jsonl --output validation_reports/post_fix.json --mode AUDIT`."
+    {
+      "priority": 1,
+      "data_file": "outputs/week3/extractions_violated_scale_change.jsonl",
+      "contract_file": "generated_contracts/week3_extractions.yaml",
+      "field": "extracted_facts.confidence",
+      "contract_clause_check_id": "week3-document-refinery-extractions.fact_confidence.range",
+      "action": "Fix producer output in `outputs/week3/extractions_violated_scale_change.jsonl` so `extracted_facts.confidence` satisfies clause `week3-document-refinery-extractions.fact_confidence.range` in `generated_contracts/week3_extractions.yaml`; verify with `python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions_violated_scale_change.jsonl --output validation_reports/post_fix.json --mode AUDIT`.",
+      "verify_command": "python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions_violated_scale_change.jsonl --output validation_reports/post_fix.json --mode AUDIT"
+    },
+    {
+      "priority": 2,
+      "data_file": "outputs/week3/extractions_violated_scale_change.jsonl",
+      "contract_file": "generated_contracts/week3_extractions.yaml",
+      "field": "source_path",
+      "contract_clause_check_id": "week3-document-refinery-extractions.source_path.min_length",
+      "action": "Fix producer output in `outputs/week3/extractions_violated_scale_change.jsonl` so `source_path` satisfies clause `week3-document-refinery-extractions.source_path.min_length` in `generated_contracts/week3_extractions.yaml`; verify with `python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions_violated_scale_change.jsonl --output validation_reports/post_fix.json --mode AUDIT`.",
+      "verify_command": "python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions_violated_scale_change.jsonl --output validation_reports/post_fix.json --mode AUDIT"
+    },
+    {
+      "priority": 3,
+      "data_file": "outputs/week3/extractions_violated_entity_refs.jsonl",
+      "contract_file": "generated_contracts/week3_extractions.yaml",
+      "field": "extracted_facts.entity_refs",
+      "contract_clause_check_id": "week3.entity_refs.resolve_to_entities",
+      "action": "Fix producer output in `outputs/week3/extractions_violated_entity_refs.jsonl` so `extracted_facts.entity_refs` satisfies clause `week3.entity_refs.resolve_to_entities` in `generated_contracts/week3_extractions.yaml`; verify with `python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions_violated_entity_refs.jsonl --output validation_reports/post_fix.json --mode AUDIT`.",
+      "verify_command": "python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions_violated_entity_refs.jsonl --output validation_reports/post_fix.json --mode AUDIT"
+    }
   ],
   "sources": {
     "violation_log": "violation_log\\violations.jsonl",

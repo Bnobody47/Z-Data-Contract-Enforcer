@@ -1,5 +1,6 @@
 import argparse
 import json
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -44,6 +45,19 @@ def load_validation_reports(pattern: str = "validation_reports/*.json"):
         except Exception:
             continue
     return reports
+
+
+def violations_by_severity(reports: list) -> dict:
+    """Non-PASS clause results grouped by runner status and declared severity (rubric: violations by severity)."""
+    c = Counter()
+    for rep in reports:
+        for r in rep.get("results", []) or []:
+            st = r.get("status")
+            if st == "PASS":
+                continue
+            sev = str(r.get("severity", "UNKNOWN")).upper()
+            c[f"{st}/{sev}"] += 1
+    return {"breakdown": dict(c), "total_non_pass_checks": sum(c.values())}
 
 
 def compute_health_score_rubric(reports: list):
@@ -175,22 +189,51 @@ def main():
         ),
     }
 
+    def evidence_data_path(contract_id: str, check_id: str, field: str) -> str:
+        if "week5" in str(contract_id):
+            return "outputs/week5/events_violated_temporal_and_sequence.jsonl"
+        if "entity_refs" in str(check_id) or "entity_refs" in str(field):
+            return "outputs/week3/extractions_violated_entity_refs.jsonl"
+        if "week3" in str(contract_id):
+            return "outputs/week3/extractions_violated_scale_change.jsonl"
+        return "outputs/week3/extractions.jsonl"
+
     recs = []
-    for nar in violations_section[:3]:
+    for pri, nar in enumerate(violations_section[:3], start=1):
         cid = nar.get("contract_id", "week3-document-refinery-extractions")
         cy = contract_yaml_path_for(cid)
         chk = nar.get("check_id", "")
-        data_path = "outputs/week5/events.jsonl" if "week5" in str(cid) else "outputs/week3/extractions.jsonl"
+        field = nar.get("failing_field", "")
+        data_path = evidence_data_path(cid, chk, field)
+        cmd = (
+            f"python contracts/runner.py --contract {cy} --data {data_path} "
+            f"--output validation_reports/post_fix.json --mode AUDIT"
+        )
         recs.append(
-            f"Inspect `{data_path}` against `{cy}` for check_id `{chk}`; "
-            f"fix the producer, then run "
-            f"`python contracts/runner.py --contract {cy} --data {data_path} "
-            f"--output validation_reports/post_fix.json --mode AUDIT`."
+            {
+                "priority": pri,
+                "data_file": data_path,
+                "contract_file": cy,
+                "field": field,
+                "contract_clause_check_id": chk,
+                "action": (
+                    f"Fix producer output in `{data_path}` so `{field}` satisfies clause `{chk}` in `{cy}`; "
+                    f"verify with `{cmd}`."
+                ),
+                "verify_command": cmd,
+            }
         )
     if not recs:
         recs.append(
-            "No violation_log rows: run `python contracts/runner.py` on clean data and keep "
-            "`generated_contracts/week3_extractions.yaml` + `generated_contracts/week5_events.yaml` as the source of truth."
+            {
+                "priority": 1,
+                "data_file": "outputs/week3/extractions.jsonl",
+                "contract_file": "generated_contracts/week3_extractions.yaml",
+                "field": "(none — clean run)",
+                "contract_clause_check_id": "(n/a)",
+                "action": "Maintain baselines: run runner on clean snapshots periodically.",
+                "verify_command": "python contracts/runner.py --contract generated_contracts/week3_extractions.yaml --data outputs/week3/extractions.jsonl --output validation_reports/sanity.json --mode AUDIT",
+            }
         )
 
     evidence = [
@@ -204,17 +247,31 @@ def main():
     ]
 
     report = {
+        "report_meta": {
+            "classification": "auto_generated_enforcer_report",
+            "generator_script": "contracts/report_generator.py",
+            "inputs_read": [
+                str(violations_path),
+                args.validation_glob,
+                args.schema_week3,
+                args.schema_week5,
+                str(ai_path) if ai_path.exists() else "validation_reports/ai_extensions_baseline.json",
+            ],
+        },
         "generated_at": iso_now(),
         "data_health_score": score,
         "health_score_detail": {
             "formula": "(passed/total)*100 - 20*distinct_critical_failures",
+            "formula_plain": "checks_passed / total_checks * 100, minus 20 points per distinct CRITICAL failing check_id",
             "passed_checks": passed_checks,
             "total_checks": total_checks,
             "distinct_critical_violations": crit_count,
         },
+        "violations_by_severity": violations_by_severity(validation_reports),
         "violations_this_week": violations_section,
         "schema_changes_detected": schema_section,
         "ai_system_risk_assessment": ai_section,
+        "recommended_actions_prioritised": recs,
         "recommended_actions": recs,
         "sources": {
             "violation_log": str(violations_path),
