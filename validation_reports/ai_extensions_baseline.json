@@ -1,0 +1,22 @@
+{
+  "embedding_drift": {
+    "status": "BASELINE_SET",
+    "drift_score": 0.0,
+    "threshold": 0.15,
+    "message": "Baseline established. Run again to detect drift."
+  },
+  "prompt_input_validation": {
+    "status": "PASS",
+    "valid_count": 60,
+    "quarantined_count": 0,
+    "quarantine_file": null
+  },
+  "output_violation_rate": {
+    "status": "BASELINE_SET",
+    "total_outputs": 60,
+    "schema_violations": 0,
+    "violation_rate": 0.0,
+    "baseline_violation_rate": null,
+    "trend": "unknown"
+  }
+}

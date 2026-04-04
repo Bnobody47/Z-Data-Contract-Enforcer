@@ -1,0 +1,10 @@
+{
+  "contract_id": "week5-event-records",
+  "written_at": "2026-04-03T08:03:37.634505",
+  "columns": {
+    "sequence_number": {
+      "mean": 6.5,
+      "stddev": 3.4811842909844075
+    }
+  }
+}

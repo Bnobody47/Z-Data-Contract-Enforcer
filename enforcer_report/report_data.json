@@ -1,0 +1,159 @@
+{
+  "generated_at": "2026-04-03T08:05:45.154293Z",
+  "data_health_score": 0,
+  "validated_contracts": [
+    "week3-document-refinery-extractions",
+    "week5-event-records"
+  ],
+  "evidence": [
+    {
+      "report_id": "587fc76c-c17d-498f-b20e-cc4d5bda5b09",
+      "contract_id": "week3-document-refinery-extractions",
+      "snapshot_id": "ff4baab07790dabe2ca8dd1eb0846bb17b66f3e341791d73bc5943f5b7a8517f",
+      "run_timestamp": "2026-04-01T17:16:19.984781Z"
+    },
+    {
+      "report_id": "a4d03bea-d237-45fd-aea6-95d2a0806ae9",
+      "contract_id": "week3-document-refinery-extractions",
+      "snapshot_id": "9b5aa2ae11f51f6f4cf875683aba5fe41e7d04e74c9edf275a2da05e65171251",
+      "run_timestamp": "2026-04-03T08:03:55.904588Z"
+    },
+    {
+      "report_id": "e7951445-0c8c-45ca-9239-b35aeb9f7bcf",
+      "contract_id": "week3-document-refinery-extractions",
+      "snapshot_id": "eda1977c97f1750c5bdca63cf4fed772b633c60cb7293c0ed0468bc1f40eeb7f",
+      "run_timestamp": "2026-04-03T08:03:49.771659Z"
+    },
+    {
+      "report_id": "338ce18a-5e52-4b8c-97b0-e0c17f8be3ad",
+      "contract_id": "week5-event-records",
+      "snapshot_id": "4be70a51857f905b773766c27656e259a3bdda0cef2ccacb4b5f1a6329ded464",
+      "run_timestamp": "2026-04-03T08:03:58.413134Z"
+    },
+    {
+      "report_id": "f9dea2ec-8da9-47a3-b734-6ec41a69bcc5",
+      "contract_id": "week3-document-refinery-extractions",
+      "snapshot_id": "ff4baab07790dabe2ca8dd1eb0846bb17b66f3e341791d73bc5943f5b7a8517f",
+      "run_timestamp": "2026-04-03T08:03:28.001743Z"
+    },
+    {
+      "report_id": "d150243e-6571-4dca-9c1b-341ff5486b9a",
+      "contract_id": "week5-event-records",
+      "snapshot_id": "4a9bcb43223982ab4e2377e573e9b0f2ecda9ac6e5720f619da6bbba43b924c1",
+      "run_timestamp": "2026-04-01T17:16:21.227251Z"
+    },
+    {
+      "report_id": "28634411-1778-403a-8e12-a2f21f1f04d6",
+      "contract_id": "week5-event-records",
+      "snapshot_id": "4a9bcb43223982ab4e2377e573e9b0f2ecda9ac6e5720f619da6bbba43b924c1",
+      "run_timestamp": "2026-04-03T08:03:37.634505Z"
+    }
+  ],
+  "top_violations": [
+    {
+      "violation_id": "d2d1386e-4fc5-466d-bd9c-75da8a2d79b7",
+      "check_id": "week3-document-refinery-extractions.fact_confidence.range",
+      "status": "FAIL",
+      "severity": "CRITICAL",
+      "failing_field": "extracted_facts.confidence",
+      "records_failing": 60,
+      "explanation": "week3-document-refinery-extractions.fact_confidence.range failed (FAIL). This indicates a contract-breaking meaning/structure change at 'extracted_facts.confidence' that downstream consumers in the registry blast radius should treat as a risk.",
+      "blast_radius": {
+        "direct_subscribers": [
+          {
+            "subscriber_id": "week4-cartographer",
+            "subscriber_team": "week4",
+            "contact": "week4-team@org.com",
+            "reason": "used for node ranking; scale change (0.0\u20131.0 vs 0\u2013100) breaks ordering"
+          }
+        ],
+        "transitive_nodes": [],
+        "contamination_depth": 1,
+        "note": "direct_subscribers from contract registry; transitive_nodes enriched from lineage snapshot"
+      },
+      "blame_chain": [
+        {
+          "commit_hash": "a2449ea80e55285f092e725f5d5ad3b9963d6d6a",
+          "author": "Bnobody47",
+          "commit_timestamp": "2026-03-04 10:35:13 +0300",
+          "commit_message": "first commit",
+          "rank": 1,
+          "confidence_score": 0.0,
+          "file_path": "C:\\Users\\Bnobody_47\\Documents\\The-Document-Intelligence-Refinery\\.refinery\\extractions"
+        }
+      ]
+    },
+    {
+      "violation_id": "41a89e71-9dc9-42c1-88a3-fca81bec53ea",
+      "check_id": "week3-document-refinery-extractions.source_path.min_length",
+      "status": "FAIL",
+      "severity": "CRITICAL",
+      "failing_field": "source_path",
+      "records_failing": 1,
+      "explanation": "week3-document-refinery-extractions.source_path.min_length failed (FAIL). This indicates a contract-breaking meaning/structure change at 'source_path' that downstream consumers in the registry blast radius should treat as a risk.",
+      "blast_radius": {
+        "direct_subscribers": [
+          {
+            "subscriber_id": "week4-cartographer",
+            "subscriber_team": "week4",
+            "contact": "week4-team@org.com",
+            "reason": "provenance and prompt construction require a non-empty source URI/path"
+          }
+        ],
+        "transitive_nodes": [],
+        "contamination_depth": 1,
+        "note": "direct_subscribers from contract registry; transitive_nodes enriched from lineage snapshot"
+      },
+      "blame_chain": [
+        {
+          "commit_hash": "a2449ea80e55285f092e725f5d5ad3b9963d6d6a",
+          "author": "Bnobody47",
+          "commit_timestamp": "2026-03-04 10:35:13 +0300",
+          "commit_message": "first commit",
+          "rank": 1,
+          "confidence_score": 0.0,
+          "file_path": "C:\\Users\\Bnobody_47\\Documents\\The-Document-Intelligence-Refinery\\.refinery\\extractions"
+        }
+      ]
+    },
+    {
+      "violation_id": "dceb3bc7-087a-4db4-a42f-7850d28081d3",
+      "check_id": "week3.entity_refs.resolve_to_entities",
+      "status": "FAIL",
+      "severity": "CRITICAL",
+      "failing_field": "extracted_facts.entity_refs",
+      "records_failing": 1,
+      "explanation": "week3.entity_refs.resolve_to_entities failed (FAIL). This indicates a contract-breaking meaning/structure change at 'extracted_facts.entity_refs' that downstream consumers in the registry blast radius should treat as a risk.",
+      "blast_radius": {
+        "direct_subscribers": [
+          {
+            "subscriber_id": "week4-cartographer",
+            "subscriber_team": "week4",
+            "contact": "week4-team@org.com",
+            "reason": "referenced entity IDs must resolve for graph metadata integrity"
+          }
+        ],
+        "transitive_nodes": [],
+        "contamination_depth": 1,
+        "note": "direct_subscribers from contract registry; transitive_nodes enriched from lineage snapshot"
+      },
+      "blame_chain": [
+        {
+          "commit_hash": "a2449ea80e55285f092e725f5d5ad3b9963d6d6a",
+          "author": "Bnobody47",
+          "commit_timestamp": "2026-03-04 10:35:13 +0300",
+          "commit_message": "first commit",
+          "rank": 1,
+          "confidence_score": 0.0,
+          "file_path": "C:\\Users\\Bnobody_47\\Documents\\The-Document-Intelligence-Refinery\\.refinery\\extractions"
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    "Mitigate 'extracted_facts.confidence': update producers/consumers and re-run ValidationRunner in AUDIT mode; then promote to ENFORCE once baselines and expectations are updated.",
+    "Mitigate 'source_path': update producers/consumers and re-run ValidationRunner in AUDIT mode; then promote to ENFORCE once baselines and expectations are updated.",
+    "Mitigate 'extracted_facts.entity_refs': update producers/consumers and re-run ValidationRunner in AUDIT mode; then promote to ENFORCE once baselines and expectations are updated."
+  ],
+  "violation_log_source": "violation_log\\violations.jsonl"
+}

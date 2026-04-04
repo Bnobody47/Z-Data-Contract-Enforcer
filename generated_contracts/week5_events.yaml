@@ -10,7 +10,7 @@ info:
 servers:
   local:
     type: local
-    path: C:\Users\Bnobody_47\Documents\Z Data Contract Enforcer\outputs\week5\events.jsonl
+    path: outputs\week5\events_violated_temporal_and_sequence.jsonl
     format: jsonl
 schema:
   event_id:
@@ -89,9 +89,8 @@ quality:
     - duplicate_count(event_id) = 0
     - invalid_count(recorded_at < occurred_at) = 0
 lineage:
-  upstream: []
-  downstream:
-  - id: pipeline::week7-contract-enforcer
-    fields_consumed:
-    - doc_id
-    - extracted_facts
+  breaking_if_changed:
+  - sequence_number
+  - aggregate_id
+  - event_type
+  - payload

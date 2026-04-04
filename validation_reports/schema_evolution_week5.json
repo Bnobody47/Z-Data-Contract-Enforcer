@@ -1,0 +1,56 @@
+{
+  "contract_id": "week5-event-records",
+  "old_snapshot": "schema_snapshots\\week5-event-records\\20260403_080215.yaml",
+  "new_snapshot": "schema_snapshots\\week5-event-records\\20260403_080315.yaml",
+  "compatibility_verdict": "COMPATIBLE",
+  "breaking_fields": [],
+  "changes": [
+    {
+      "field": "aggregate_id",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for aggregate_id."
+    },
+    {
+      "field": "aggregate_type",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for aggregate_type."
+    },
+    {
+      "field": "event_id",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for event_id."
+    },
+    {
+      "field": "event_type",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for event_type."
+    },
+    {
+      "field": "occurred_at",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for occurred_at."
+    },
+    {
+      "field": "recorded_at",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for recorded_at."
+    },
+    {
+      "field": "schema_version",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for schema_version."
+    },
+    {
+      "field": "sequence_number",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for sequence_number."
+    }
+  ],
+  "migration_impact_report": {
+    "diff_summary": "Schema + stats were compared field-by-field. Confidence drift is classified via stats when max/mean indicate a 0\u20131 -> 0\u2013100 rescale.",
+    "migration_checklist": [
+      "No breaking changes detected: re-run ValidationRunner on a fresh snapshot after the next release."
+    ],
+    "rollback_plan": []
+  }
+}

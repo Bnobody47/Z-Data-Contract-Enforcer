@@ -10,7 +10,7 @@ info:
 servers:
   local:
     type: local
-    path: C:\Users\Bnobody_47\Documents\Z Data Contract Enforcer\outputs\week3\extractions.jsonl
+    path: outputs\week3\extractions_violated_scale_change.jsonl
     format: jsonl
 schema:
   doc_id:
@@ -83,15 +83,15 @@ schema:
     minimum: 0.0
     maximum: 1.0
     stats:
-      min: 0.611
-      max: 0.976
-      mean: 0.8021166666666666
-      p25: 0.71
-      p50: 0.81
-      p75: 0.899
-      p95: 0.96505
-      p99: 0.9712799999999999
-      stddev: 0.11301553690498002
+      min: 61.1
+      max: 97.6
+      mean: 80.21166666666667
+      p25: 71.0
+      p50: 81.0
+      p75: 89.9
+      p95: 96.505
+      p99: 97.128
+      stddev: 11.301553690498002
   fact_page_ref:
     type: integer
     required: true
@@ -149,9 +149,8 @@ quality:
     - invalid_count(fact_confidence < 0.0 OR fact_confidence > 1.0) = 0
     - row_count > 0
 lineage:
-  upstream: []
-  downstream:
-  - id: pipeline::week7-contract-enforcer
-    fields_consumed:
-    - doc_id
-    - extracted_facts
+  breaking_if_changed:
+  - fact_confidence
+  - doc_id
+  - source_hash
+  - extracted_facts

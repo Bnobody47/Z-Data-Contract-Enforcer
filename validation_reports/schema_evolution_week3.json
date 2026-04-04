@@ -1,0 +1,93 @@
+{
+  "contract_id": "week3-document-refinery-extractions",
+  "old_snapshot": "schema_snapshots\\week3-document-refinery-extractions\\20260403_080206.yaml",
+  "new_snapshot": "schema_snapshots\\week3-document-refinery-extractions\\20260403_080258.yaml",
+  "compatibility_verdict": "BREAKING",
+  "breaking_fields": [
+    "fact_confidence"
+  ],
+  "changes": [
+    {
+      "field": "doc_id",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for doc_id."
+    },
+    {
+      "field": "extracted_at",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for extracted_at."
+    },
+    {
+      "field": "extraction_model",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for extraction_model."
+    },
+    {
+      "field": "fact_confidence",
+      "verdict": "BREAKING",
+      "reason": "Confidence scale drift for fact_confidence: max 0.976 -> 97.6 (0\u20131 -> 0\u2013100)."
+    },
+    {
+      "field": "fact_entity_refs",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for fact_entity_refs."
+    },
+    {
+      "field": "fact_fact_id",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for fact_fact_id."
+    },
+    {
+      "field": "fact_page_ref",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for fact_page_ref."
+    },
+    {
+      "field": "fact_source_excerpt",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for fact_source_excerpt."
+    },
+    {
+      "field": "fact_text",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for fact_text."
+    },
+    {
+      "field": "processing_time_ms",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for processing_time_ms."
+    },
+    {
+      "field": "source_hash",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for source_hash."
+    },
+    {
+      "field": "source_path",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for source_path."
+    },
+    {
+      "field": "token_input",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for token_input."
+    },
+    {
+      "field": "token_output",
+      "verdict": "COMPATIBLE",
+      "reason": "No breaking material change detected for token_output."
+    }
+  ],
+  "migration_impact_report": {
+    "diff_summary": "Schema + stats were compared field-by-field. Confidence drift is classified via stats when max/mean indicate a 0\u20131 -> 0\u2013100 rescale.",
+    "migration_checklist": [
+      "Coordinate a migration for field 'fact_confidence': update producers/consumers and re-establish statistical baselines after deploying changes.",
+      "Update contract(s) with new bounds/ranges, then re-run ValidationRunner in AUDIT mode to confirm zero false positives."
+    ],
+    "rollback_plan": [
+      "Roll back producer changes to the previous snapshot-producing version.",
+      "Re-run ValidationRunner on the rolled-back data to confirm baselines and structural checks return to PASS.",
+      "Apply migration with explicit deprecation/alias strategy and communicate blast radius to subscribers via the registry."
+    ]
+  }
+}

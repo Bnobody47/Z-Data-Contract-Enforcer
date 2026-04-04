@@ -10,7 +10,7 @@ info:
 servers:
   local:
     type: local
-    path: outputs\week3\extractions_violated_scale_change.jsonl
+    path: outputs\week3\extractions.jsonl
     format: jsonl
 schema:
   doc_id:
@@ -83,15 +83,15 @@ schema:
     minimum: 0.0
     maximum: 1.0
     stats:
-      min: 61.1
-      max: 97.6
-      mean: 80.21166666666667
-      p25: 71.0
-      p50: 81.0
-      p75: 89.9
-      p95: 96.505
-      p99: 97.128
-      stddev: 11.301553690498002
+      min: 0.611
+      max: 0.976
+      mean: 0.8021166666666666
+      p25: 0.71
+      p50: 0.81
+      p75: 0.899
+      p95: 0.96505
+      p99: 0.9712799999999999
+      stddev: 0.11301553690498002
   fact_page_ref:
     type: integer
     required: true

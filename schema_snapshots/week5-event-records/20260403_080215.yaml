@@ -10,7 +10,7 @@ info:
 servers:
   local:
     type: local
-    path: outputs\week5\events_violated_temporal_and_sequence.jsonl
+    path: outputs\week5\events.jsonl
     format: jsonl
 schema:
   event_id:

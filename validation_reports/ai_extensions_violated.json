@@ -1,0 +1,23 @@
+{
+  "embedding_drift": {
+    "status": "PASS",
+    "drift_score": 0.000277,
+    "threshold": 0.15,
+    "interpretation": "stable"
+  },
+  "prompt_input_validation": {
+    "status": "FAIL",
+    "valid_count": 59,
+    "quarantined_count": 1,
+    "quarantine_file": "outputs\\quarantine\\trace_prompt_quarantine.jsonl"
+  },
+  "output_violation_rate": {
+    "status": "WARN",
+    "total_outputs": 60,
+    "schema_violations": 1,
+    "violation_rate": 0.016667,
+    "baseline_violation_rate": 0.0,
+    "trend": "rising",
+    "warn_threshold": 0.02
+  }
+}

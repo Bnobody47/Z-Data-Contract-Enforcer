@@ -165,7 +165,7 @@ Evidence is taken from **your own** `outputs/` JSONL in the Week 7 repo, not fro
 
 ### 3.3 Violations
 
-**No failing checks** were recorded on either run (`failed: 0` on both reports). For the **final** submission you will **inject or capture** at least one failing run to demonstrate FAIL rows and attribution; the interim milestone establishes a **clean baseline** against your own data.
+**No failing checks** were recorded on the **clean interim baseline** runs (`failed: 0` on both reports). For the **final** submission evidence, I generated violated datasets (scale-change + entity-ref break + week5 invariant break), ran `contracts/runner.py` to produce FAIL rows, and then produced `violation_log/violations.jsonl` plus `enforcer_report/report_data.json` via `contracts/attributor.py` and `contracts/report_generator.py`.
 
 ### 3.4 What “no violations” means for downstream risk (not merely “all green”)
 
