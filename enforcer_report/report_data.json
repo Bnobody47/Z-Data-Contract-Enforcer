@@ -10,21 +10,21 @@
       "validation_reports\\ai_extensions_violated.json"
     ]
   },
-  "generated_at": "2026-04-04T17:51:04.642774Z",
+  "generated_at": "2026-04-04T18:57:05.112885Z",
   "data_health_score": 0.0,
   "health_score_detail": {
     "formula": "(passed/total)*100 - 20*distinct_critical_failures",
     "formula_plain": "checks_passed / total_checks * 100, minus 20 points per distinct CRITICAL failing check_id",
-    "passed_checks": 283,
-    "total_checks": 289,
+    "passed_checks": 332,
+    "total_checks": 341,
     "distinct_critical_violations": 5
   },
   "violations_by_severity": {
     "breakdown": {
-      "FAIL/CRITICAL": 5,
-      "FAIL/HIGH": 1
+      "FAIL/CRITICAL": 7,
+      "FAIL/HIGH": 2
     },
-    "total_non_pass_checks": 6
+    "total_non_pass_checks": 9
   },
   "violations_this_week": [
     {
@@ -407,6 +407,12 @@
     "validation_reports_glob": "validation_reports/*.json"
   },
   "evidence": [
+    {
+      "report_id": "3ed64891-a34f-4aad-90f4-9b725a37ae94",
+      "contract_id": "week3-document-refinery-extractions",
+      "snapshot_id": "eda1977c97f1750c5bdca63cf4fed772b633c60cb7293c0ed0468bc1f40eeb7f",
+      "run_timestamp": "2026-04-04T18:49:20.063559Z"
+    },
     {
       "report_id": "587fc76c-c17d-498f-b20e-cc4d5bda5b09",
       "contract_id": "week3-document-refinery-extractions",

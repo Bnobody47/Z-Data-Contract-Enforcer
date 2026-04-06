@@ -1,5 +1,5 @@
 {
-  "written_at": "2026-04-01T17:16:19.982794",
+  "written_at": "2026-04-06T09:35:06.887934Z",
   "columns": {
     "processing_time_ms": {
       "mean": 1282.15,
@@ -20,6 +20,33 @@
     "fact_page_ref": {
       "mean": 6.316666666666666,
       "stddev": 3.4321099240953
+    }
+  },
+  "contracts": {
+    "week3-document-refinery-extractions": {
+      "columns": {
+        "processing_time_ms": {
+          "mean": 1282.15,
+          "stddev": 563.2957144026633
+        },
+        "token_input": {
+          "mean": 1214.6333333333334,
+          "stddev": 380.81691702678506
+        },
+        "token_output": {
+          "mean": 508.3,
+          "stddev": 237.09479617419137
+        },
+        "fact_confidence": {
+          "mean": 0.8021166666666666,
+          "stddev": 0.11301553690498002
+        },
+        "fact_page_ref": {
+          "mean": 6.316666666666666,
+          "stddev": 3.4321099240953
+        }
+      },
+      "written_at": "2026-04-06T09:35:06.887934Z"
     }
   }
 }

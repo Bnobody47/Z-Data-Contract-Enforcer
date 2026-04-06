@@ -14,7 +14,7 @@ python -m pip install -r requirements.txt
 
 ## 2. Baseline contracts + validation baselines (clean data)
 
-Contracts and dbt counterparts are generated from your Week 3/5 sample outputs. The generator also writes **statistical baselines** (`schema_snapshots/baselines_<contract>.json` and `schema_snapshots/baselines.json`), optional **LLM column annotations** (set `OPENAI_API_KEY`), and **downstream consumers** from Week 4 lineage when `--lineage` is passed.
+Contracts and dbt counterparts are generated from your Week 3/5 sample outputs. The generator also writes **statistical baselines** (`schema_snapshots/baselines_<contract>.json` and `schema_snapshots/baselines.json`), optional **LLM column annotations** (set `OPENROUTER_API_KEY` in `.env` or `OPENAI_API_KEY`), and **downstream consumers** from Week 4 lineage when `--lineage` is passed.
 
 ```powershell
 python contracts\generator.py --source outputs\week3\extractions.jsonl --contract-id week3-document-refinery-extractions --lineage outputs\week4\lineage_snapshots.jsonl --output generated_contracts
@@ -97,4 +97,14 @@ python contracts\report_generator.py --output enforcer_report\report_data.json
 ```
 
 The final artifact is `enforcer_report/report_data.json`.
+
+## 10. Optional local UI dashboard
+
+Use Streamlit to inspect the most important artifacts in one screen (contract, validation, blame, schema evolution, AI checks, report) and optionally run the full demo pipeline script.
+
+```powershell
+streamlit run ui\dashboard.py
+```
+
+The dashboard automatically reads `.env` and shows whether `OPENROUTER_API_KEY` is available.
 

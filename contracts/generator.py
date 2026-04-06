@@ -11,6 +11,21 @@ import pandas as pd
 import yaml
 
 
+def load_env_file(path: Path):
+    """Minimal .env loader (no external dependency)."""
+    if not path.exists():
+        return
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
 def load_jsonl(path: Path):
     records = []
     with path.open("r", encoding="utf-8") as f:
@@ -238,7 +253,8 @@ def write_statistical_baselines(contract_id: str, df: pd.DataFrame):
 def llm_annotate_ambiguous_columns(column_profiles: dict) -> list:
     """
     Optional LLM call for high-cardinality string columns (ambiguous semantics).
-    Uses OPENAI_API_KEY + OPENAI_MODEL when set; otherwise records a skipped call (still an explicit annotation pass).
+    Supports OPENROUTER_API_KEY (preferred) or OPENAI_API_KEY.
+    If neither is set, records a skipped call.
     """
     ambiguous = []
     for name, prof in column_profiles.items():
@@ -250,8 +266,19 @@ def llm_annotate_ambiguous_columns(column_profiles: dict) -> list:
         ambiguous.append((name, samples[:8]))
 
     annotations = []
-    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
-    model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini").strip()
+    openrouter_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
+
+    if openrouter_key:
+        provider = "openrouter"
+        api_key = openrouter_key
+        model = os.environ.get("OPENROUTER_MODEL", "openai/gpt-4o-mini").strip()
+        api_url = "https://openrouter.ai/api/v1/chat/completions"
+    else:
+        provider = "openai"
+        api_key = openai_key
+        model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini").strip()
+        api_url = "https://api.openai.com/v1/chat/completions"
 
     for col_name, samples in ambiguous[:12]:
         if not api_key:
@@ -260,7 +287,7 @@ def llm_annotate_ambiguous_columns(column_profiles: dict) -> list:
                     "column": col_name,
                     "llm_annotation": None,
                     "llm_call_status": "skipped_no_api_key",
-                    "note": "Set OPENAI_API_KEY to enable live LLM column semantics annotation.",
+                    "note": "Set OPENROUTER_API_KEY (or OPENAI_API_KEY) to enable live LLM column semantics annotation.",
                 }
             )
             continue
@@ -282,11 +309,18 @@ def llm_annotate_ambiguous_columns(column_profiles: dict) -> list:
             }
         ).encode("utf-8")
         req = urllib.request.Request(
-            "https://api.openai.com/v1/chat/completions",
+            api_url,
             data=body,
             headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
             method="POST",
         )
+        if provider == "openrouter":
+            site_url = os.environ.get("OPENROUTER_SITE_URL", "").strip()
+            app_name = os.environ.get("OPENROUTER_APP_NAME", "Z Data Contract Enforcer").strip()
+            if site_url:
+                req.add_header("HTTP-Referer", site_url)
+            if app_name:
+                req.add_header("X-Title", app_name)
         try:
             with urllib.request.urlopen(req, timeout=60) as resp:
                 raw = json.loads(resp.read().decode("utf-8"))
@@ -665,6 +699,7 @@ def write_snapshot(contract: dict, contract_id: str):
 
 
 def main():
+    load_env_file(Path(".env"))
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", required=True)
     parser.add_argument("--contract-id", required=True)
